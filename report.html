@@ -62,9 +62,7 @@
   .kw-delta{font-size:11.5px; font-weight:600; margin-top:3px; letter-spacing:.01em;}
   .kw-delta.up{color:var(--up);} .kw-delta.down{color:var(--down);} .kw-delta.flat{color:var(--faint);}
   .kw-delta .from{color:var(--faint); font-weight:500;}
-  .chart{width:100%; height:150px; display:block; margin-top:8px;}
-  .xax{display:flex; justify-content:space-between; font-size:10.5px; color:var(--faint); margin-top:1px;
-    letter-spacing:.02em;}
+  .chart{width:100%; height:auto; display:block; margin-top:10px;}
   .kw-empty{font-size:12.5px; color:var(--faint); padding:20px 0 8px;}
 
   /* 통계 */
@@ -124,61 +122,72 @@ function groupByKeyword(ranks){
   return m;
 }
 
-// Catmull-Rom → 부드러운 3차 베지어 경로
-function smooth(pts){
-  if(pts.length<2) return '';
-  let d=`M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
-  for(let i=0;i<pts.length-1;i++){
-    const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||pts[i+1];
-    const c1x=p1.x+(p2.x-p0.x)/6, c1y=p1.y+(p2.y-p0.y)/6;
-    const c2x=p2.x-(p3.x-p1.x)/6, c2y=p2.y-(p3.y-p1.y)/6;
-    d+=` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
-  }
-  return d;
-}
-
-// 순위 추이 차트 (rank 낮을수록 위=상단). 부드러운 곡선 + 면적 그라데이션 + 은은한 그리드
+// 순위 추이 차트 — 축·그리드·측정점 마커·값/날짜 라벨을 갖춘 애널리틱스 스타일.
+// rank 낮을수록 상단(1위가 위). 비율 유지(preserveAspectRatio) → 라벨 왜곡 없음.
 function rankChart(series, uid){
-  const W=780,H=150,padL=6,padR=6,padT=20,padB=14;
+  const W=760, H=190;
+  const padT=26, padB=30, padL=40, padR=16;   // 위=값라벨, 아래=날짜, 왼쪽=순위축
+  const plotL=padL, plotR=W-padR, plotT=padT, plotB=H-padB;
+  const plotW=plotR-plotL, plotH=plotB-plotT;
   const vals=series.filter(p=>p.rank!=null).map(p=>p.rank);
   if(vals.length===0) return '<div class="kw-empty">아직 측정 범위(순위권) 밖입니다. 노출을 끌어올리는 중입니다.</div>';
+
   let lo=Math.min(...vals), hi=Math.max(...vals);
-  if(hi===lo){ hi=lo+2; lo=Math.max(1,lo-2); }
-  const pad=(hi-lo)*0.18; hi+=pad; lo-=pad;
+  if(hi===lo){ hi=lo+3; lo=Math.max(1,lo-3); }
+  const span=hi-lo, padv=Math.max(1, Math.round(span*0.28));
+  let dmin=Math.max(1, lo-padv), dmax=hi+padv;          // 순위 도메인(상=dmin=좋음)
   const n=series.length;
-  const X=i=> padL+(n<=1?(W-padL-padR)/2:(i/(n-1))*(W-padL-padR));
-  const Y=r=> padT+((r-lo)/(hi-lo))*(H-padT-padB);
-  const baseY=H-padB+8;
+  const X=i=> plotL + (n<=1? plotW/2 : (i/(n-1))*plotW);
+  const Y=r=> plotT + ((r-dmin)/(dmax-dmin))*plotH;
 
-  // 그리드 (가로 3줄)
-  let grid='';
-  for(let g=0; g<=2; g++){ const gy=(padT+(g/2)*(H-padT-padB)).toFixed(1);
-    grid+=`<line x1="0" y1="${gy}" x2="${W}" y2="${gy}" stroke="#f0f3f5" stroke-width="1"/>`; }
+  // Y축 눈금(순위) — 3~4개, 정수
+  const ticks=[]; const T=3;
+  for(let k=0;k<=T;k++){ const v=Math.round(dmin+(k/T)*(dmax-dmin)); if(!ticks.includes(v)) ticks.push(v); }
+  let grid='', yl='';
+  ticks.forEach(v=>{ const gy=Y(v).toFixed(1);
+    grid+=`<line x1="${plotL}" y1="${gy}" x2="${plotR}" y2="${gy}" stroke="#eef2f4" stroke-width="1"/>`;
+    yl+=`<text x="${plotL-9}" y="${(+gy+3.5)}" text-anchor="end" font-size="10.5" fill="#9aa6b2">${v}위</text>`;
+  });
 
-  // null 기준으로 연속 구간 분할
+  // null 기준 연속 구간 분할
   const segs=[]; let cur=[];
   series.forEach((p,i)=>{ if(p.rank==null){ if(cur.length)segs.push(cur); cur=[]; }
-    else cur.push({x:X(i), y:Y(p.rank), last:i===n-1}); });
+    else cur.push({x:X(i), y:Y(p.rank), r:p.rank, i}); });
   if(cur.length) segs.push(cur);
 
-  let area='', line='', dots='';
+  let area='', line='';
   segs.forEach(seg=>{
-    if(seg.length===1){ dots+=`<circle cx="${seg[0].x.toFixed(1)}" cy="${seg[0].y.toFixed(1)}" r="3.2" fill="#0f7a56"/>`; return; }
-    const path=smooth(seg);
-    area+=`<path d="${path} L ${seg[seg.length-1].x.toFixed(1)} ${baseY} L ${seg[0].x.toFixed(1)} ${baseY} Z" fill="url(#g${uid})"/>`;
-    line+=`<path d="${path}" fill="none" stroke="#0f7a56" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if(seg.length<2) return;
+    const d='M '+seg.map(p=>`${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' L ');
+    area+=`<path d="${d} L ${seg[seg.length-1].x.toFixed(1)} ${plotB} L ${seg[0].x.toFixed(1)} ${plotB} Z" fill="url(#g${uid})"/>`;
+    line+=`<path d="${d}" fill="none" stroke="#0f7a56" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`;
   });
-  // 끝점 강조 (마지막 실측점)
-  const lastPt=[].concat(...segs).filter(p=>p.last)[0];
-  if(lastPt){ dots+=`<circle cx="${lastPt.x.toFixed(1)}" cy="${lastPt.y.toFixed(1)}" r="6" fill="#0f7a56" opacity="0.14"/>`
-    +`<circle cx="${lastPt.x.toFixed(1)}" cy="${lastPt.y.toFixed(1)}" r="3.4" fill="#0f7a56" stroke="#fff" stroke-width="1.6"/>`; }
 
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+  // 측정점 마커 + 값 라벨 + 날짜 라벨
+  let dots='', vlab='', xlab='';
+  const showEvery = n>8 ? 2 : 1;   // 점이 많으면 날짜/값 라벨 솎아냄
+  series.forEach((p,i)=>{
+    const px=X(i);
+    // 날짜 라벨(솎기, 처음·끝은 항상)
+    if(i%showEvery===0 || i===n-1){
+      const anc = i===0?'start':(i===n-1?'end':'middle');
+      xlab+=`<text x="${px.toFixed(1)}" y="${H-11}" text-anchor="${anc}" font-size="10" fill="#9aa6b2">${mdShort(p.checked_on)}</text>`;
+    }
+    if(p.rank==null) return;
+    const py=Y(p.rank), last=i===n-1;
+    dots+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${last?4.4:3}" fill="#fff" stroke="#0f7a56" stroke-width="${last?2.4:2}"/>`;
+    if(i%showEvery===0 || last){
+      const anc = i===0?'start':(i===n-1?'end':'middle');
+      vlab+=`<text x="${px.toFixed(1)}" y="${(py-9).toFixed(1)}" text-anchor="${anc}" font-size="11" font-weight="${last?800:700}" fill="${last?'#0b5c41':'#334155'}">${p.rank}</text>`;
+    }
+  });
+
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}">
     <defs><linearGradient id="g${uid}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0f7a56" stop-opacity="0.16"/>
+      <stop offset="0%" stop-color="#0f7a56" stop-opacity="0.14"/>
       <stop offset="100%" stop-color="#0f7a56" stop-opacity="0"/>
     </linearGradient></defs>
-    ${grid}${area}${line}${dots}</svg>`;
+    ${grid}${yl}${area}${line}${dots}${vlab}${xlab}</svg>`;
 }
 
 function deltaLine(series){
@@ -233,7 +242,6 @@ function render(d){
           <div class="kw-cur">${curHtml}${deltaLine(s)}</div>
         </div>
         ${rankChart(s, idx)}
-        <div class="xax"><span>${s.length?mdShort(s[0].checked_on):''}</span><span>${s.length?mdShort(s[s.length-1].checked_on):''}</span></div>
       </div>`;
     });
   }
