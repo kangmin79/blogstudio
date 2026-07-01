@@ -120,8 +120,8 @@ function rankChart(series){
     if(p.rank==null){ started=false; return; }
     const px=x(i).toFixed(1), py=y(p.rank).toFixed(1);
     d += (started?' L':' M')+px+' '+py; started=true;
-    dots += `<circle cx="${px}" cy="${py}" r="3.5" fill="#12805c"/>`;
-    if(i===n-1) dots += `<text x="${px}" y="${(+py-9)}" text-anchor="middle" font-size="12" font-weight="800" fill="#0e6a4c">${p.rank}위</text>`;
+    const last = i===n-1;
+    dots += `<circle cx="${px}" cy="${py}" r="${last?4.5:3.5}" fill="#12805c"/>`;
   });
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
     <path d="${d}" fill="none" stroke="#12805c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
