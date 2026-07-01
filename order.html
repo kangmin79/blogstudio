@@ -177,11 +177,12 @@
         <div class="t">내 블로그</div><div class="d">내 네이버 블로그에 대행</div></div>
     </div>
     <div class="reveal" id="rv-customer">
-      <label class="fld">네이버 아이디</label>
-      <input type="text" id="naver_id" placeholder="네이버 로그인 아이디" autocomplete="off">
-      <label class="fld">네이버 비밀번호</label>
-      <input type="password" id="naver_pw" placeholder="네이버 로그인 비밀번호" autocomplete="new-password">
-      <div class="hint">🔒 손님 블로그에 대신 발행하기 위한 로그인 정보입니다. 대행 발행 용도로만 사용됩니다.</div>
+      <label class="fld">네이버 계정 파일 올리기</label>
+      <label class="upload" for="acct_file" id="acctLabel">클릭해서 계정 txt 파일 선택</label>
+      <input type="file" id="acct_file" accept=".txt,text/plain" style="display:none;">
+      <div class="hint" id="acctInfo">🔒 <b>아이디/비밀번호</b> 형식의 txt 파일. 대행 발행 용도로만 사용됩니다.</div>
+      <input type="hidden" id="naver_id">
+      <input type="hidden" id="naver_pw">
     </div>
   </div>
 
@@ -399,6 +400,23 @@ document.getElementById('photo_files').addEventListener('change', e=>{
   const n=e.target.files.length;
   document.getElementById('photo_count').textContent = n ? `사진 ${n}장 선택됨` : '';
 });
+// 계정 txt 파일 → 아이디/비번 자동 인식 (형식: 아이디/비번/...)
+document.getElementById('acct_file').addEventListener('change', e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    const line=(r.result||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean)[0]||'';
+    const parts=line.split('/');
+    const id=(parts[0]||'').trim(), pw=(parts[1]||'').trim();
+    document.getElementById('naver_id').value=id;
+    document.getElementById('naver_pw').value=pw;
+    const info=document.getElementById('acctInfo'), lbl=document.getElementById('acctLabel');
+    if(id && pw){ lbl.textContent='✅ '+f.name; info.textContent=`아이디 ${id} 인식됨 · 비밀번호 확인됨`; }
+    else { lbl.textContent='클릭해서 계정 txt 파일 선택';
+      info.textContent='⚠️ 파일에서 아이디/비번을 못 읽었습니다. 형식: 아이디/비번/...'; }
+  };
+  r.readAsText(f,'utf-8');
+});
 let currentPoints = 0;
 function updatePrice(){
   const done = order.target && order.copy && order.image && order.promo;
@@ -412,7 +430,7 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
   if(order.target==='customer'){
     const nid = document.getElementById('naver_id').value.trim();
     const npw = document.getElementById('naver_pw').value;
-    if(!nid || !npw){ alert('내 블로그 대행은 네이버 아이디와 비밀번호가 필요합니다.'); return; }
+    if(!nid || !npw){ alert('내 블로그 대행은 네이버 계정 파일(아이디/비번)을 올려주세요.'); return; }
   }
   const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='처리 중...';
   const { data, error } = await sb.rpc('place_order', {
