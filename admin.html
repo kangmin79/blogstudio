@@ -271,7 +271,7 @@ async function openPlace(id){
   const ranks=data.ranks||[], months=data.months||[];
   const kws=(p.target_keywords||[]);
   const kwOpts = kws.length? kws.map(k=>'<option>'+esc(k)+'</option>').join('') : '<option value="">(키워드 없음 — 먼저 수정에서 추가)</option>';
-  let rankRows = ranks.slice(0,12).map(r=>'<div class="rline"><span>'+esc(r.keyword)+' <span class="muted">'+r.checked_on+'</span></span><b>'+(r.rank==null?'순위밖':r.rank+'위')+'</b></div>').join('') || '<div class="muted" style="padding:6px 0">아직 기록 없음</div>';
+  let rankRows = ranks.slice(0,12).map(r=>{const tn=(r.top_list||[]).length; return '<div class="rline"><span>'+esc(r.keyword)+' <span class="muted">'+r.checked_on+(tn?' · 상위'+tn:'')+'</span></span><b>'+(r.rank==null?'순위밖':r.rank+'위')+'</b></div>';}).join('') || '<div class="muted" style="padding:6px 0">아직 기록 없음</div>';
   let monRows = months.map(m=>{const s=m.stats||{}; return '<div class="rline"><span>'+esc(m.ym)+'</span><span class="muted">조회 '+(s.views||0)+' · 유입 '+(s.visits||0)+' · 클릭 '+(s.reserve_clicks||0)+'</span></div>';}).join('') || '<div class="muted" style="padding:6px 0">아직 없음</div>';
   openModal(
     '<div class="mtitle">'+esc(p.name)+' · 데이터 입력</div>'
@@ -283,6 +283,8 @@ async function openPlace(id){
     +'<div><label class="fl">측정일</label><input class="fi" id="rk_date" type="date" value="'+today()+'"></div>'
     +'<div><label class="fl">순위 (빈칸=순위밖)</label><input class="fi" id="rk_rank" type="number" min="1" placeholder="예: 7"></div>'
     +'</div>'
+    +'<label class="fl" style="margin-top:12px;">상위 업체 (선택 · 한 줄에 하나, 위→아래 = 1위. 우리 상호 넣으면 자동 표시)</label>'
+    +'<textarea class="fi" id="rk_tops" rows="4" placeholder="연세반듯치과&#10;서울굿모닝치과&#10;'+esc(p.name).replace(/\x27/g,"")+'&#10;바른이치과"></textarea>'
     +'<button class="ok" style="margin-top:10px;" onclick="saveRank(\''+id+'\')">순위 저장</button>'
     +'<div style="margin-top:12px;">'+rankRows+'</div>'
     +'</div>'
@@ -307,9 +309,17 @@ async function saveRank(id){
   const kw=document.getElementById('rk_kw').value.trim();
   if(!kw){ alert('키워드가 없습니다. [수정]에서 추적 키워드를 먼저 추가하세요.'); return; }
   const rv=document.getElementById('rk_rank').value.trim();
+  // 상위 업체 목록 파싱 (한 줄=한 업체, 순서=1위부터). 우리 상호는 자동 표시.
+  const p=PLACES.find(x=>x.id===id)||{};
+  const norm=s=>String(s||'').replace(/\(.*?\)/g,'').replace(/\s+/g,'').toLowerCase();
+  const pn=norm(p.name);
+  const lines=(document.getElementById('rk_tops').value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const tops=lines.map((nm,i)=>{ const l=norm(nm);
+    return { rank:i+1, name:nm, ours: !!(l && pn && (l.includes(pn)||pn.includes(l))) }; });
   const { error } = await sb.rpc('admin_record_rank',{
     p_place_id:id, p_keyword:kw, p_rank: rv===''? null : parseInt(rv,10),
-    p_checked_on: document.getElementById('rk_date').value || today() });
+    p_checked_on: document.getElementById('rk_date').value || today(),
+    p_top_list: tops });
   if(error){ alert('저장 실패: '+error.message); return; }
   openPlace(id); // 새로고침
 }

@@ -65,6 +65,20 @@
   .chart{width:100%; height:auto; display:block; margin-top:10px;}
   .kw-empty{font-size:12.5px; color:var(--faint); padding:20px 0 8px;}
 
+  /* 상위 노출 업체 */
+  .tops{margin-top:16px; border-top:1px solid var(--line); padding-top:14px;}
+  .tops-lab{font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); margin-bottom:9px;}
+  .top-row{display:flex; align-items:center; gap:11px; padding:7px 10px; border-radius:9px; font-size:13px;}
+  .top-row + .top-row{margin-top:2px;}
+  .top-row .trk{width:22px; height:22px; flex:none; border-radius:7px; background:#f1f4f6; color:var(--soft);
+    font-size:11.5px; font-weight:800; display:flex; align-items:center; justify-content:center;}
+  .top-row .tnm{flex:1; color:#334155; letter-spacing:-.01em;}
+  .top-row.ours{background:var(--tint);}
+  .top-row.ours .trk{background:var(--green); color:#fff;}
+  .top-row.ours .tnm{color:var(--green-d); font-weight:800;}
+  .top-row .tag{font-size:10px; font-weight:800; letter-spacing:.04em; color:var(--green);
+    background:#fff; border:1px solid #cfe6dc; padding:2px 8px; border-radius:20px;}
+
   /* 통계 */
   .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
   @media(max-width:560px){ .stat-grid{grid-template-columns:1fr;} }
@@ -199,6 +213,26 @@ function deltaLine(series){
   return `<div class="kw-delta flat">순위 유지</div>`;
 }
 
+// 최신 측정의 상위 노출 업체 표 (경쟁사 + 우리 위치)
+function topsTable(series){
+  // top_list 있는 가장 최근 측정 찾기
+  let latest=null;
+  for(let i=series.length-1;i>=0;i--){
+    const tl=series[i].top_list;
+    if(tl && tl.length){ latest={date:series[i].checked_on, list:tl}; break; }
+  }
+  if(!latest) return '';
+  const list=latest.list.slice().sort((a,b)=>(a.rank||0)-(b.rank||0)).slice(0,12);
+  const rows=list.map(e=>{
+    const ours=!!e.ours;
+    return `<div class="top-row${ours?' ours':''}">
+      <span class="trk num">${e.rank}</span>
+      <span class="tnm">${esc(e.name)}</span>
+      ${ours?'<span class="tag">우리 가게</span>':''}</div>`;
+  }).join('');
+  return `<div class="tops"><div class="tops-lab">상위 노출 업체 · ${mdShort(latest.date)} 기준</div>${rows}</div>`;
+}
+
 function momBadge(cur,prev){
   if(prev==null||prev===0) return '';
   const p=Math.round(((cur-prev)/prev)*100);
@@ -242,6 +276,7 @@ function render(d){
           <div class="kw-cur">${curHtml}${deltaLine(s)}</div>
         </div>
         ${rankChart(s, idx)}
+        ${topsTable(s)}
       </div>`;
     });
   }
