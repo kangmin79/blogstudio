@@ -140,6 +140,20 @@
   .bchip{display:inline-block; font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; margin-left:3px;}
   .bchip.on{color:var(--green); background:var(--tint);} .bchip.off{color:#c3c8c4; background:#f3f5f4;}
 
+  /* 경쟁 진단 */
+  .panel.diag{border-color:#e7dcc0; box-shadow:0 10px 26px rgba(150,120,40,.06);}
+  .diag-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:6px;}
+  @media(max-width:560px){ .diag-grid{grid-template-columns:1fr;} }
+  .dg-h{font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--line); color:var(--light);}
+  .dg-h.win{color:var(--good);} .dg-h.lose{color:var(--bad);}
+  .dg-row{display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:8px 2px; font-size:13px;}
+  .dg-row .dl2{font-weight:700;} .dg-row .dv{font-size:12px; color:var(--sub); text-align:right; white-space:nowrap;}
+  .dg-row .dv b{color:var(--text); font-variant-numeric:tabular-nums;}
+  .dg-empty{font-size:12.5px; color:var(--light); padding:10px 2px;}
+  .rx-wrap{margin-top:18px; border-top:1px solid var(--line); padding-top:15px;}
+  .rx{display:flex; gap:11px; align-items:flex-start; font-size:13px; padding:7px 0; color:#3a463f; line-height:1.55;}
+  .rx-n{flex:none; width:21px; height:21px; border-radius:7px; background:var(--gold-s); color:var(--gold); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px;}
+
   /* KPI */
   .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
   @media(max-width:560px){ .kpis{grid-template-columns:1fr;} }
@@ -267,6 +281,49 @@ function profilePanel(profiles){
       ${rows}</table></div></div>`;
 }
 
+// 경쟁 진단 — 우리 vs 경쟁사 평균, 강점/약점 + 처방
+function diagnosisPanel(profiles){
+  const ours=profiles.find(x=>x.is_ours), comps=profiles.filter(x=>!x.is_ours);
+  if(!ours || !comps.length) return '';
+  const avg=arr=>{arr=arr.filter(v=>v!=null); return arr.length? arr.reduce((a,b)=>a+b,0)/arr.length : null;};
+  const metrics=[
+    {l:'방문자 리뷰', unit:'', better:'high', ours:ours.visitor_reviews, comp:avg(comps.map(c=>c.visitor_reviews)),
+      rx:'방문자(영수증) 리뷰가 부족해요. 리뷰 이벤트(QR·문구)로 늘리세요'},
+    {l:'블로그 리뷰', unit:'', better:'high', ours:ours.blog_reviews, comp:avg(comps.map(c=>c.blog_reviews)),
+      rx:'블로그 리뷰가 부족해요. 블로그 발행을 늘려 노출을 넓히세요 (BlogStudio 대행)'},
+    {l:'리뷰 답변율', unit:'%', better:'high', ours:ours.reply_rate, comp:avg(comps.map(c=>c.reply_rate)),
+      rx:'리뷰 답변율이 낮아요. 리뷰마다 답글을 달아 관리 신호를 높이세요'},
+    {l:'소식 최신성', unit:'일 전', better:'low', ours:ours.news_days, comp:avg(comps.map(c=>c.news_days)),
+      rx:'소식이 뜸해요. 주 1회 소식으로 "관리되는 플레이스" 신호를 유지하세요'},
+  ];
+  const wins=[], loses=[], rx=[];
+  metrics.forEach(m=>{
+    if(m.ours==null||m.comp==null) return;
+    const better = m.better==='high' ? m.ours>=m.comp : m.ours<=m.comp;
+    const row=`<div class="dg-row"><span class="dl2">${m.l}</span>
+      <span class="dv">우리 <b>${fmtN(m.ours)}${m.unit}</b> · 경쟁평균 ${fmtN(Math.round(m.comp))}${m.unit}</span></div>`;
+    if(better) wins.push(row); else { loses.push(row); rx.push(m.rx); }
+  });
+  // 세팅 부족 → 처방 추가
+  if(!ours.has_booking) rx.push('예약 버튼이 없어요. 예약 연동을 켜면 전환·순위에 유리해요');
+  if(!ours.has_talk)    rx.push('톡톡이 연결 안 됐어요. 문의 응대 채널을 켜세요');
+  if(!ours.has_coupon)  rx.push('쿠폰이 없어요. 쿠폰을 걸면 방문 유도에 도움돼요');
+  if((ours.photos||0)<10) rx.push('대표 사진이 부족해요(10장 미만). 사진을 보강하세요');
+
+  const winH = wins.length? wins.join('') : '<div class="dg-empty">아직 앞서는 항목이 없어요</div>';
+  const loseH = loses.length? loses.join('') : '<div class="dg-empty">지표상 뒤처지는 항목이 없어요 👍</div>';
+  const rxH = rx.length? rx.map((t,i)=>`<div class="rx"><span class="rx-n num">${i+1}</span>${esc(t)}</div>`).join('')
+                       : '<div class="dg-empty">지금 아주 잘 하고 있어요 👍 이 페이스를 유지하세요.</div>';
+  return `<div class="panel diag"><h3>경쟁 진단 · 우리에게 부족한 것</h3>
+    <div class="psub">상위 경쟁사 평균과 비교한 강점·약점, 그리고 이번 달 처방</div>
+    <div class="diag-grid">
+      <div><div class="dg-h win">우리가 앞서는 항목</div>${winH}</div>
+      <div><div class="dg-h lose">따라잡아야 할 항목</div>${loseH}</div>
+    </div>
+    <div class="rx-wrap"><div class="dg-h">이번 달 처방 (할 일)</div>${rxH}</div>
+  </div>`;
+}
+
 // 스마트플레이스 통계 패널 (세로 스택)
 function statPanel(lastM,prevM){
   if(!lastM) return '';
@@ -328,6 +385,10 @@ function render(d){
       </div></div>`;
   h+=`<div class="honest"><b>정직하게 알려드립니다.</b> 네이버 순위는 알고리즘과 경쟁 상황에 따라 늘 변동합니다.
       특정 순위를 보장하지 않으며, 실제 측정한 순위 추이와 유입 성장을 있는 그대로 보여드립니다.</div>`;
+
+  // 경쟁 진단 (요약 처방 — 맨 위)
+  const diag=diagnosisPanel(d.profiles||[]);
+  if(diag) h+=`<div style="margin:16px 0;">${diag}</div>`;
 
   // ── 대시보드 그리드 (패널 좌우 배치) ──
   // Row A: 순위 추이 차트 | 스마트플레이스 통계
