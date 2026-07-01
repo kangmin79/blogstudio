@@ -4,90 +4,113 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BlogStudio — 주문</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --paper:#f6f3ec; --ink:#33302a; --soft:#6d685e; --line:#dcd5c7;
-    --green:#1c4a3b; --green2:#2f5d4d; --gold:#a8763a; --white:#fffefb; --tint:#eef0e9;
+    --bg:#f6f8f9; --card:#ffffff; --ink:#111827; --soft:#6b7280; --line:#e5e7eb;
+    --green:#12805c; --green2:#0e6a4c; --tint:#e8f6f0; --brandtext:#12805c;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  body{background:var(--paper); color:var(--ink);
-    font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; line-height:1.7;}
-  .serif{font-family:'Nanum Myeongjo', serif;}
-  .wrap{max-width:660px; margin:0 auto; padding:0 24px 120px;}
+  body{background:var(--bg); color:var(--ink); line-height:1.6;
+    font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .serif{font-family:inherit;}
+  .wrap{max-width:980px; margin:0 auto; padding:0 20px 60px;}
+
+  /* 2단 레이아웃: 폼(왼) + 현황(오른) */
+  .layout{display:grid; grid-template-columns:1fr 280px; gap:28px; align-items:start;}
+  .main{min-width:0;}
+  .side{position:sticky; top:76px;}
+  .status-card{background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:18px; box-shadow:0 1px 3px rgba(17,24,39,.04);}
+  .sc-title{display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; color:var(--ink);}
+  .live-dot{width:9px; height:9px; border-radius:50%; background:#22c55e;
+    box-shadow:0 0 0 3px rgba(34,197,94,.18);}
+  .live-dot.off{background:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.18);}
+  .sc-state{margin:12px 0; font-size:15px; font-weight:700; color:var(--brandtext);}
+  .sc-row{display:flex; justify-content:space-between; align-items:center; font-size:13.5px;
+    color:var(--soft); padding:10px 0; border-top:1px solid var(--line);}
+  .sc-row b{font-size:18px; color:var(--ink); font-weight:800;}
+  .sc-note{margin-top:12px; font-size:12px; color:var(--soft); line-height:1.5;}
+  @media(max-width:780px){ .layout{grid-template-columns:1fr;} .side{position:static;} }
 
   /* 로그인 게이트 */
-  .gate{position:fixed; inset:0; background:var(--paper); display:flex; align-items:center;
+  .gate{position:fixed; inset:0; background:var(--bg); display:flex; align-items:center;
     justify-content:center; z-index:100; padding:24px;}
-  .gate-box{max-width:360px; width:100%; text-align:center;}
-  .gate-box .brand{font-family:'Nanum Myeongjo',serif; font-size:30px; font-weight:800; color:var(--green);}
-  .gate-box .brand span{color:var(--gold);}
-  .gate-box p{color:var(--soft); margin:12px 0 32px; font-size:15px;}
+  .gate-box{max-width:360px; width:100%; text-align:center; background:var(--card);
+    border:1px solid var(--line); border-radius:16px; padding:36px 28px;
+    box-shadow:0 8px 30px rgba(17,24,39,.06);}
+  .gate-box .brand{font-size:26px; font-weight:800; color:var(--ink); letter-spacing:-.02em;}
+  .gate-box .brand span{color:var(--brandtext);}
+  .gate-box p{color:var(--soft); margin:10px 0 26px; font-size:14.5px;}
   .lbtn{display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
-    padding:14px; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer;
-    border:1.5px solid var(--line); background:#fff; margin-bottom:12px; color:#333;}
-  .lbtn:hover{border-color:var(--green2);}
+    padding:14px; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer;
+    border:1px solid var(--line); background:#fff; margin-bottom:12px; color:#333; transition:.15s;}
+  .lbtn:hover{background:#f9fafb;}
   .lbtn.kakao{background:#FEE500; border-color:#FEE500; color:#191600;}
+  .lbtn.kakao:hover{background:#f5dc00;}
   .lbtn img,.lbtn svg{width:18px; height:18px;}
-  .gate-box .free{margin-top:20px; font-size:13px; color:var(--gold); font-weight:700;}
+  .gate-box .free{margin-top:18px; font-size:13px; color:var(--soft); font-weight:600;}
 
   /* 상단바 */
-  nav{display:flex; align-items:center; justify-content:space-between;
-    padding:20px 0; border-bottom:2px solid var(--green);}
-  .brand{font-family:'Nanum Myeongjo',serif; font-size:20px; font-weight:800; color:var(--green);}
-  .userbox{display:flex; align-items:center; gap:14px; font-size:13px;}
-  .pts{font-family:'Nanum Myeongjo',serif; font-weight:800; color:var(--gold); font-size:16px;}
-  .logout{color:var(--soft); border-bottom:1px solid var(--soft); cursor:pointer; padding-bottom:1px;}
+  nav{display:flex; align-items:center; justify-content:space-between; padding:16px 0;
+    border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:10;}
+  .brand{font-size:18px; font-weight:800; color:var(--ink); letter-spacing:-.02em;}
+  .brand span{color:var(--brandtext);}
+  .userbox{display:flex; align-items:center; gap:12px; font-size:13px; color:var(--soft);}
+  .pts{font-weight:800; color:var(--brandtext); font-size:15px;
+    background:var(--tint); padding:4px 10px; border-radius:20px;}
+  .logout{color:var(--soft); cursor:pointer;}
+  .logout:hover{color:var(--ink);}
 
-  .intro{padding:30px 0 6px;}
-  .intro h1{font-family:'Nanum Myeongjo',serif; font-size:28px; font-weight:800; color:var(--green);}
+  .intro{padding:32px 0 8px;}
+  .intro h1{font-size:26px; font-weight:800; color:var(--ink); letter-spacing:-.03em;}
   .intro p{color:var(--soft); margin-top:8px; font-size:15px;}
 
-  .section{padding:28px 0; border-top:1px solid var(--line);}
-  .step-head{display:flex; align-items:baseline; gap:12px;}
-  .step-head .num{font-family:'Nanum Myeongjo',serif; font-size:15px; font-weight:700; color:var(--gold);}
-  .step-head h2{font-family:'Nanum Myeongjo',serif; font-size:21px; font-weight:700; color:var(--green);}
-  .badge{font-size:11px; font-weight:700; color:var(--gold); border:1px solid var(--gold);
-    padding:2px 8px; border-radius:3px; margin-left:8px; vertical-align:middle;}
-  .step-desc{font-size:13.5px; color:var(--soft); margin:6px 0 16px 27px;}
+  .section{padding:22px; margin-top:16px; background:var(--card);
+    border:1px solid var(--line); border-radius:14px; box-shadow:0 1px 3px rgba(17,24,39,.04);}
+  .step-head{display:flex; align-items:center; gap:10px;}
+  .step-head .num{font-size:12px; font-weight:800; color:#fff; background:var(--green);
+    width:24px; height:24px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center;}
+  .step-head h2{font-size:18px; font-weight:700; color:var(--ink); letter-spacing:-.01em;}
+  .badge{font-size:11px; font-weight:700; color:var(--green); background:var(--tint);
+    padding:3px 9px; border-radius:20px; margin-left:6px; vertical-align:middle;}
+  .step-desc{font-size:13.5px; color:var(--soft); margin:6px 0 16px 34px;}
 
   .choices{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-  .choice{position:relative; border:1.5px solid var(--line); border-radius:6px; padding:18px 16px;
-    cursor:pointer; background:var(--white); transition:.15s;}
-  .choice:hover{border-color:var(--green2);}
-  .choice.on{border-color:var(--green); border-width:2px; background:var(--tint); padding:17px 15px;}
-  .choice .t{font-family:'Nanum Myeongjo',serif; font-weight:700; font-size:16px; color:var(--green);}
+  .choice{position:relative; border:1px solid var(--line); border-radius:12px; padding:16px;
+    cursor:pointer; background:#fff; transition:.15s;}
+  .choice:hover{border-color:#c9cdd4; box-shadow:0 2px 8px rgba(17,24,39,.06);}
+  .choice.on{border-color:var(--green); border-width:2px; background:var(--tint); padding:15px;}
+  .choice .t{font-weight:700; font-size:15.5px; color:var(--ink);}
   .choice .d{font-size:12.5px; color:var(--soft); margin-top:4px;}
-  .choice .dot{position:absolute; top:14px; right:14px; width:15px; height:15px; border-radius:50%;
-    border:1.5px solid var(--line);}
-  .choice.on .dot{border-color:var(--green); background:var(--green); box-shadow:inset 0 0 0 3px var(--white);}
+  .choice .dot{position:absolute; top:14px; right:14px; width:18px; height:18px; border-radius:50%;
+    border:2px solid var(--line);}
+  .choice.on .dot{border-color:var(--green); background:var(--green); box-shadow:inset 0 0 0 3px #fff;}
 
-  .reveal{margin-top:16px; padding-top:16px; border-top:1px dashed var(--line); display:none;}
+  .reveal{margin-top:16px; padding-top:16px; border-top:1px solid var(--line); display:none;}
   .reveal.show{display:block;}
-  label.fld{display:block; font-size:13px; font-weight:700; color:var(--green2); margin:14px 0 6px;}
+  label.fld{display:block; font-size:13px; font-weight:600; color:var(--ink); margin:14px 0 6px;}
   input[type=text], input[type=tel], textarea{
-    width:100%; border:1.5px solid var(--line); border-radius:6px; padding:11px 12px;
-    font-size:14px; font-family:inherit; background:var(--white); color:var(--ink);}
-  input:focus, textarea:focus{outline:none; border-color:var(--green);}
+    width:100%; border:1px solid var(--line); border-radius:10px; padding:12px 13px;
+    font-size:14.5px; font-family:inherit; background:#fff; color:var(--ink); transition:.15s;}
+  input:focus, textarea:focus{outline:none; border-color:var(--green); box-shadow:0 0 0 3px var(--tint);}
   textarea{resize:vertical; min-height:90px;}
   .hint{font-size:12px; color:var(--soft); margin-top:5px;}
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-  .upload{display:block; border:1.5px dashed var(--line); border-radius:6px; padding:18px;
-    text-align:center; color:var(--soft); cursor:pointer; font-size:14px;}
+  .upload{display:block; border:1.5px dashed #cfd4db; border-radius:10px; padding:20px;
+    text-align:center; color:var(--soft); cursor:pointer; font-size:14px; transition:.15s;}
+  .upload:hover{border-color:var(--green); background:var(--tint);}
 
-  .submit{position:fixed; bottom:0; left:0; right:0; background:var(--white);
-    border-top:2px solid var(--green); padding:14px 16px;}
-  .submit .inner{max-width:660px; margin:0 auto; display:flex; align-items:center; gap:14px;}
-  .submit .price{flex:1; font-size:13px; color:var(--soft);}
-  .submit .price b{font-family:'Nanum Myeongjo',serif; font-size:20px; color:var(--green); display:block; font-weight:800;}
-  .btn{background:var(--green); color:var(--white); border:none; border-radius:5px;
-    padding:14px 30px; font-size:16px; font-weight:700; cursor:pointer;
-    font-family:'Nanum Myeongjo',serif;}
+  .orderbar{display:flex; align-items:center; gap:14px; margin-top:20px; padding:18px 22px;
+    background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:0 1px 3px rgba(17,24,39,.04);}
+  .orderbar .price{flex:1; font-size:13px; color:var(--soft);}
+  .orderbar .price b{font-size:20px; color:var(--ink); font-weight:800; letter-spacing:-.02em; margin-left:8px;}
+  .btn{background:var(--green); color:#fff; border:none; border-radius:10px;
+    padding:14px 28px; font-size:15.5px; font-weight:700; cursor:pointer; transition:.15s;}
   .btn:hover{background:var(--green2);}
-  .btn:disabled{background:#c4bdae; cursor:not-allowed;}
+  .btn:disabled{background:#cbd5d1; cursor:not-allowed;}
   #app{display:none;}
 </style>
 </head>
@@ -124,6 +147,8 @@
     </div>
   </nav>
 
+  <div class="layout">
+  <div class="main">
   <div class="intro">
     <h1 class="serif">무엇을 올려드릴까요?</h1>
     <p>아래만 고르시면 됩니다. 나머지는 저희가 합니다.</p>
@@ -205,12 +230,21 @@
       </div>
     </div>
   </div>
-</div>
-<div class="submit">
-  <div class="inner">
-    <div class="price">차감 포인트<b id="price">선택해 주세요</b></div>
+  <div class="orderbar">
+    <div class="price">차감 포인트 <b id="price">선택해 주세요</b></div>
     <button class="btn" id="submitBtn" disabled>주문하기</button>
   </div>
+  </div><!-- /main -->
+
+  <aside class="side">
+    <div class="status-card">
+      <div class="sc-title"><span class="live-dot" id="liveDot"></span> 자동 처리 현황</div>
+      <div class="sc-state" id="fleetState">확인 중…</div>
+      <div class="sc-row"><span>대기 주문</span><b id="fleetPending">-</b></div>
+      <div class="sc-note">주문하면 저희 시스템이 자동으로 받아 순서대로 처리합니다.</div>
+    </div>
+  </aside>
+  </div><!-- /layout -->
 </div>
 </div>
 
@@ -266,6 +300,25 @@ async function boot(){
 }
 sb.auth.onAuthStateChange((_e, session)=>{ if(session) showApp(session.user); });
 boot();
+
+// ===== 실시간 처리 현황 (워커 heartbeat 기반) =====
+async function loadFleet(){
+  try{
+    const { data } = await sb.rpc('fleet_status');
+    if(!data) return;
+    const on = data.online > 0;
+    const dot = document.getElementById('liveDot');
+    if(dot) dot.className = 'live-dot' + (on ? '' : ' off');
+    const st = document.getElementById('fleetState');
+    if(st) st.textContent = on
+      ? (data.working > 0 ? `${data.working}대 처리 중` : '가동 중 · 바로 처리')
+      : '접수 후 순차 처리';
+    const pd = document.getElementById('fleetPending');
+    if(pd) pd.textContent = (data.pending || 0) + '건';
+  }catch(e){}
+}
+loadFleet();
+setInterval(loadFleet, 12000);
 
 // ===== 주문 폼 =====
 const order = { target:null, copy:null, image:null, promo:null };
