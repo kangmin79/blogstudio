@@ -33,6 +33,19 @@
     color:var(--soft); padding:10px 0; border-top:1px solid var(--line);}
   .sc-row b{font-size:18px; color:var(--ink); font-weight:800;}
   .sc-note{margin-top:12px; font-size:12px; color:var(--soft); line-height:1.5;}
+  .side-card{background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:18px; box-shadow:0 1px 3px rgba(17,24,39,.04); margin-top:14px;}
+  .steps{list-style:none; margin:12px 0 0; padding:0;}
+  .steps li{display:flex; gap:10px; align-items:flex-start; padding:8px 0;}
+  .st-n{flex:none; width:22px; height:22px; border-radius:50%; background:var(--tint);
+    color:var(--green); font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center;}
+  .steps b{font-size:13.5px; color:var(--ink);}
+  .steps p{font-size:12px; color:var(--soft); margin-top:1px;}
+  .pt-big{margin:10px 0 14px; font-size:15px; color:var(--soft);}
+  .pt-big b{font-size:28px; color:var(--ink); font-weight:800; letter-spacing:-.02em; margin-right:3px;}
+  .charge-btn{width:100%; padding:11px; border:1px solid var(--green); background:#fff; color:var(--green);
+    border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; transition:.15s;}
+  .charge-btn:hover{background:var(--tint);}
   @media(max-width:780px){ .layout{grid-template-columns:1fr;} .side{position:static;} }
 
   /* 로그인 게이트 */
@@ -243,6 +256,22 @@
       <div class="sc-row"><span>대기 주문</span><b id="fleetPending">-</b></div>
       <div class="sc-note">주문하면 저희 시스템이 자동으로 받아 순서대로 처리합니다.</div>
     </div>
+
+    <div class="side-card">
+      <div class="sc-title">이렇게 처리돼요</div>
+      <ol class="steps">
+        <li><span class="st-n">1</span><div><b>주문 접수</b><p>아래에서 옵션만 선택</p></div></li>
+        <li><span class="st-n">2</span><div><b>AI 원고·이미지 생성</b><p>맡기면 저희가 작성</p></div></li>
+        <li><span class="st-n">3</span><div><b>블로그 자동 발행</b><p>완료되면 알려드려요</p></div></li>
+      </ol>
+    </div>
+
+    <div class="side-card">
+      <div class="sc-title">포인트</div>
+      <div class="pt-big"><b id="sidePts">-</b><span>P</span></div>
+      <button class="charge-btn" onclick="requestCharge()">충전 신청</button>
+      <div class="sc-note">무통장 입금 후 신청하면 확인 뒤 지급됩니다.</div>
+    </div>
   </aside>
   </div><!-- /layout -->
 </div>
@@ -290,6 +319,19 @@ async function showApp(user){
   const { data } = await sb.from('profiles').select('nickname, point_balance').eq('id', user.id).single();
   document.getElementById('userName').textContent = (data?.nickname || '회원') + '님';
   document.getElementById('userPts').textContent = (data?.point_balance ?? 0) + 'P';
+  const sp = document.getElementById('sidePts'); if(sp) sp.textContent = (data?.point_balance ?? 0);
+}
+
+async function requestCharge(){
+  const p = prompt('충전할 포인트를 입력하세요 (예: 100)');
+  if(p===null) return;
+  const points = parseInt(p, 10);
+  if(!points || points <= 0){ alert('숫자를 입력해주세요.'); return; }
+  const name = prompt('입금자명을 입력하세요 (통장에 찍히는 이름)');
+  if(name===null) return;
+  const { error } = await sb.rpc('request_charge', { p_points:points, p_amount_krw:null, p_depositor:name||null });
+  if(error){ alert('충전 신청 실패: '+error.message); return; }
+  alert('충전 신청이 접수되었습니다!\n무통장 입금 후 관리자 확인이 끝나면 포인트가 지급됩니다.');
 }
 async function boot(){
   const params = new URLSearchParams(location.search);
