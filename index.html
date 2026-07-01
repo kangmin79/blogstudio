@@ -3,176 +3,192 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BlogStudio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<title>BlogStudio — 주문만 하면 끝나는 블로그 자동 발행</title>
+<meta name="description" content="설치도, 켜둔 PC도 필요 없습니다. 주문하면 AI가 글을 쓰고 알아서 발행합니다. 첫 글은 무료.">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
   :root{
-    --paper:#f6f3ec; --ink:#33302a; --soft:#6d685e; --line:#dcd5c7;
-    --green:#1c4a3b; --green2:#2f5d4d; --gold:#a8763a; --white:#fffefb;
+    --bg:#f6f8f9; --card:#ffffff; --ink:#111827; --soft:#6b7280; --line:#e5e7eb;
+    --green:#12805c; --green2:#0e6a4c; --tint:#e8f6f0;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  body{
-    background:var(--paper); color:var(--ink);
-    font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-    line-height:1.75; -webkit-font-smoothing:antialiased;
-  }
-  .serif{font-family:'Nanum Myeongjo', serif;}
-  .wrap{max-width:720px; margin:0 auto; padding:0 28px;}
+  body{background:var(--bg); color:var(--ink); line-height:1.6;
+    font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    -webkit-font-smoothing:antialiased;}
   a{color:inherit; text-decoration:none;}
-  .gold{color:var(--gold);}
-
-  /* 라벨 (키커) */
-  .kicker{font-size:12px; letter-spacing:.22em; text-transform:uppercase;
-    color:var(--gold); font-weight:700;}
+  .wrap{max-width:960px; margin:0 auto; padding:0 24px;}
 
   /* 상단바 */
-  nav{display:flex; align-items:center; justify-content:space-between;
-    padding:26px 0; border-bottom:2px solid var(--green);}
-  .brand{font-family:'Nanum Myeongjo',serif; font-size:21px; font-weight:800;
-    letter-spacing:.01em; color:var(--green);}
-  .nav-link{font-size:14px; font-weight:700; color:var(--green);
-    border-bottom:1px solid var(--gold); padding-bottom:1px;}
-  .nav-link:hover{color:var(--gold);}
+  nav{display:flex; align-items:center; justify-content:space-between; padding:18px 0;
+    position:sticky; top:0; background:rgba(246,248,249,.85); backdrop-filter:blur(8px); z-index:20;}
+  .brand{font-size:19px; font-weight:800; color:var(--ink); letter-spacing:-.02em;}
+  .brand span{color:var(--green);}
+  .nav-cta{font-size:14px; font-weight:700; color:#fff; background:var(--green);
+    padding:9px 18px; border-radius:9px; transition:.15s;}
+  .nav-cta:hover{background:var(--green2);}
 
   /* 히어로 */
-  .hero{padding:92px 0 84px;}
-  .hero .kicker{margin-bottom:30px;}
-  .hero h1{font-family:'Nanum Myeongjo',serif; font-weight:800; color:var(--green);
-    font-size:52px; line-height:1.34; letter-spacing:-.01em;}
-  .hero p{margin-top:34px; font-size:18px; color:var(--ink); max-width:30em; line-height:1.85;}
-  .hero p b{color:var(--green2);}
-  .hero .go{display:inline-block; margin-top:44px; font-size:16px; font-weight:700; color:var(--white);
-    background:var(--green); padding:13px 28px; border-radius:4px;}
-  .hero .go:hover{background:var(--green2);}
+  .hero{padding:76px 0 64px; text-align:center;}
+  .pill{display:inline-block; font-size:12.5px; font-weight:700; color:var(--green);
+    background:var(--tint); padding:6px 14px; border-radius:20px; letter-spacing:.01em;}
+  .hero h1{font-size:52px; font-weight:800; color:var(--ink); letter-spacing:-.035em;
+    line-height:1.18; margin:24px 0 0;}
+  .hero h1 span{color:var(--green);}
+  .hero p{margin:22px auto 0; font-size:18px; color:var(--soft); max-width:30em; line-height:1.75;}
+  .hero p b{color:var(--ink); font-weight:700;}
+  .cta-row{margin-top:36px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;}
+  .btn-primary{display:inline-block; font-size:16px; font-weight:700; color:#fff;
+    background:var(--green); padding:14px 30px; border-radius:11px; transition:.15s;
+    box-shadow:0 6px 20px rgba(18,128,92,.22);}
+  .btn-primary:hover{background:var(--green2); transform:translateY(-1px);}
+  .btn-ghost{display:inline-block; font-size:16px; font-weight:700; color:var(--ink);
+    background:#fff; border:1px solid var(--line); padding:14px 26px; border-radius:11px; transition:.15s;}
+  .btn-ghost:hover{border-color:#c9cdd4;}
+  .hero-note{margin-top:18px; font-size:13.5px; color:var(--soft);}
+  .hero-note b{color:var(--green); font-weight:800;}
 
-  /* 섹션 */
-  section{padding:76px 0; border-top:1px solid var(--line);}
-  .sec-label{display:flex; align-items:baseline; gap:14px; margin-bottom:40px;}
-  .sec-label .num{font-family:'Nanum Myeongjo',serif; font-size:16px; font-weight:700; color:var(--gold);}
-  .sec-label .ttl{font-size:13px; letter-spacing:.18em; text-transform:uppercase;
-    color:var(--green); font-weight:700;}
+  /* 섹션 공통 */
+  section{padding:60px 0;}
+  .sec-head{text-align:center; margin-bottom:40px;}
+  .sec-kicker{font-size:12.5px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--green);}
+  .sec-head h2{font-size:32px; font-weight:800; color:var(--ink); letter-spacing:-.025em; margin-top:10px;}
+  .sec-head p{font-size:15.5px; color:var(--soft); margin-top:10px;}
 
-  /* 매니페스토 */
-  .manifesto p{font-family:'Nanum Myeongjo',serif; font-weight:700; color:var(--green);
-    font-size:38px; line-height:1.55; letter-spacing:-.01em;}
-  .manifesto p .x{color:var(--gold);}
-  .manifesto .close{font-family:inherit; font-weight:400; font-size:16.5px; color:var(--ink);
-    margin-top:38px; line-height:1.9; max-width:34em;}
-  .manifesto .close b{color:var(--green2);}
+  /* 다른 점 — 3 카드 (필요 없습니다) */
+  .diff{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .diff-card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:26px 22px;
+    box-shadow:0 1px 3px rgba(17,24,39,.04);}
+  .diff-card .no{display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:800;
+    color:#ef4444; background:#fef2f2; padding:5px 11px; border-radius:20px;}
+  .diff-card h3{font-size:19px; font-weight:800; color:var(--ink); margin:16px 0 8px; letter-spacing:-.02em;}
+  .diff-card p{font-size:14px; color:var(--soft); line-height:1.65;}
+  .diff-close{margin-top:26px; text-align:center; font-size:16px; color:var(--soft); line-height:1.8;}
+  .diff-close b{color:var(--ink); font-weight:800;}
 
-  /* 작동 방식 */
-  .step{display:grid; grid-template-columns:54px 1fr; gap:22px;
-    padding:30px 0; border-bottom:1px solid var(--line);}
-  .step:last-child{border-bottom:none;}
-  .step .n{font-family:'Nanum Myeongjo',serif; font-size:34px; font-weight:800; color:var(--gold); line-height:1;}
-  .step h3{font-family:'Nanum Myeongjo',serif; font-size:24px; font-weight:700; color:var(--green);}
-  .step p{margin-top:8px; font-size:15.5px; color:var(--ink);}
+  /* 어떻게 — 3 스텝 */
+  .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .step{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:26px 22px;
+    box-shadow:0 1px 3px rgba(17,24,39,.04); position:relative;}
+  .step .n{width:36px; height:36px; border-radius:10px; background:var(--green); color:#fff;
+    font-size:16px; font-weight:800; display:flex; align-items:center; justify-content:center;}
+  .step h3{font-size:18px; font-weight:800; color:var(--ink); margin:16px 0 8px; letter-spacing:-.02em;}
+  .step p{font-size:14px; color:var(--soft); line-height:1.65;}
 
-  /* 이용 방법 */
-  .use p{font-size:18px; color:var(--ink); line-height:1.95; max-width:32em;}
-  .use .accent{color:var(--gold); font-weight:700;}
-  .use .gr{color:var(--green2); font-weight:700;}
+  /* 이용 방법 — 강조 배너 */
+  .use{background:linear-gradient(135deg,var(--green),var(--green2)); border-radius:20px;
+    padding:52px 40px; text-align:center; color:#fff;}
+  .use h2{font-size:30px; font-weight:800; letter-spacing:-.025em;}
+  .use p{margin:18px auto 0; font-size:16.5px; max-width:34em; line-height:1.8; color:rgba(255,255,255,.9);}
+  .use p b{color:#fff; font-weight:800;}
+  .use .btn-white{display:inline-block; margin-top:32px; font-size:16px; font-weight:800; color:var(--green);
+    background:#fff; padding:14px 32px; border-radius:11px; transition:.15s;}
+  .use .btn-white:hover{transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,.18);}
 
-  /* 마무리 */
-  .final{text-align:center; padding:100px 0;}
-  .final h2{font-family:'Nanum Myeongjo',serif; font-weight:800; color:var(--green);
-    font-size:44px; letter-spacing:-.01em;}
-  .final .go{display:inline-block; margin-top:36px; font-size:16px; font-weight:700; color:var(--white);
-    background:var(--green); padding:13px 30px; border-radius:4px;}
-  .final .go:hover{background:var(--green2);}
-
-  footer{border-top:2px solid var(--green); padding:32px 0 56px;
+  footer{border-top:1px solid var(--line); padding:32px 0 56px; margin-top:20px;
     font-size:13px; color:var(--soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
 
-  @media(max-width:600px){
-    .hero{padding:60px 0 56px;}
-    .hero h1{font-size:36px; line-height:1.4;}
-    .manifesto p{font-size:27px;}
-    .final h2{font-size:31px;}
-    .sec-label{margin-bottom:30px;}
+  @media(max-width:760px){
+    .hero{padding:52px 0 44px;}
+    .hero h1{font-size:36px;}
+    .hero p{font-size:16px;}
+    .sec-head h2{font-size:26px;}
+    .diff, .steps{grid-template-columns:1fr;}
+    .use{padding:40px 26px;} .use h2{font-size:25px;}
   }
 </style>
 </head>
 <body>
-<div class="wrap">
 
+<div class="wrap">
   <nav>
-    <div class="brand">BlogStudio</div>
-    <a class="nav-link" href="order.html">주문하기</a>
+    <div class="brand">Blog<span>Studio</span></div>
+    <a class="nav-cta" href="order.html">주문하기</a>
   </nav>
 
   <!-- 히어로 -->
   <header class="hero">
-    <div class="kicker">블로그 자동 발행 서비스</div>
-    <h1 class="serif">쓰지 않아도,<br>블로그는 <span class="gold">채워집니다.</span></h1>
+    <span class="pill">블로그 자동 발행 서비스</span>
+    <h1>쓰지 않아도,<br>블로그는 <span>채워집니다.</span></h1>
     <p>프로그램도, 관리도 없이. 주문하면 <b>AI가 글을 쓰고, 알아서 발행</b>합니다.
        사장님은 장사에만 집중하세요.</p>
-    <a class="go" href="order.html">시작하기 →</a>
+    <div class="cta-row">
+      <a class="btn-primary" href="order.html">무료로 시작하기</a>
+      <a class="btn-ghost" href="#how">어떻게 되나요?</a>
+    </div>
+    <div class="hero-note">가입 시 <b>무료 30P</b> 지급 · 첫 글은 무료</div>
   </header>
 
-  <!-- 01 다른 점 -->
+  <!-- 다른 점 -->
   <section>
-    <div class="sec-label"><span class="num">01</span><span class="ttl">다른 점</span></div>
-    <div class="manifesto">
-      <p>
-        설치가, <span class="x">필요 없습니다.</span><br>
-        켜둔 PC가, <span class="x">필요 없습니다.</span><br>
-        테더링도 관리도, <span class="x">필요 없습니다.</span>
-      </p>
-      <p class="close">
-        기존 프로그램은 사장님께 너무 많은 것을 시켰습니다.
-        직접 사서, 직접 설치하고, 하루 종일 화면을 지켜보게 했죠.
-        BlogStudio는 그 모든 것을 대신합니다. <b>사장님이 할 일은 단 하나, 주문뿐입니다.</b>
-      </p>
+    <div class="sec-head">
+      <div class="sec-kicker">다른 점</div>
+      <h2>이런 게, 필요 없습니다</h2>
+      <p>기존 프로그램은 사장님께 너무 많은 것을 시켰습니다.</p>
+    </div>
+    <div class="diff">
+      <div class="diff-card">
+        <span class="no">✕ 없음</span>
+        <h3>프로그램 설치</h3>
+        <p>내 PC에 뭘 깔 필요가 없습니다. 웹에서 주문만 하면 됩니다.</p>
+      </div>
+      <div class="diff-card">
+        <span class="no">✕ 없음</span>
+        <h3>켜둔 PC</h3>
+        <p>하루 종일 화면을 지킬 필요가 없습니다. 저희 시스템이 대신 돕니다.</p>
+      </div>
+      <div class="diff-card">
+        <span class="no">✕ 없음</span>
+        <h3>테더링·관리</h3>
+        <p>IP도, 설정도, 관리도 없습니다. 접수되면 알아서 처리됩니다.</p>
+      </div>
+    </div>
+    <div class="diff-close">
+      BlogStudio는 그 모든 것을 대신합니다.<br>
+      <b>사장님이 할 일은 단 하나, 주문뿐입니다.</b>
     </div>
   </section>
 
-  <!-- 02 어떻게 -->
-  <section>
-    <div class="sec-label"><span class="num">02</span><span class="ttl">어떻게</span></div>
+  <!-- 어떻게 -->
+  <section id="how">
+    <div class="sec-head">
+      <div class="sec-kicker">어떻게</div>
+      <h2>3단계면 끝납니다</h2>
+    </div>
     <div class="steps">
       <div class="step">
-        <div class="n serif">一</div>
-        <div><h3 class="serif">주문한다</h3>
-          <p>주제와 옵션을 고르고 주문합니다. 가게 정보를 넣으면 글에 자연스럽게 담깁니다.</p></div>
+        <div class="n">1</div>
+        <h3>주문한다</h3>
+        <p>주제와 옵션을 고르고 주문합니다. 가게 정보를 넣으면 글에 자연스럽게 담깁니다.</p>
       </div>
       <div class="step">
-        <div class="n serif">二</div>
-        <div><h3 class="serif">AI가 만든다</h3>
-          <p>글과 이미지를 자동으로 제작합니다. 직접 쓰거나, 사진을 주셔도 됩니다.</p></div>
+        <div class="n">2</div>
+        <h3>AI가 만든다</h3>
+        <p>글과 이미지를 자동으로 제작합니다. 직접 쓰거나, 사진을 주셔도 됩니다.</p>
       </div>
       <div class="step">
-        <div class="n serif">三</div>
-        <div><h3 class="serif">발행된다</h3>
-          <p>완성된 글이 블로그에 올라갑니다. 사장님은 결과만 확인하면 됩니다.</p></div>
+        <div class="n">3</div>
+        <h3>발행된다</h3>
+        <p>완성된 글이 블로그에 올라갑니다. 사장님은 결과만 확인하면 됩니다.</p>
       </div>
     </div>
   </section>
 
-  <!-- 03 이용 방법 -->
-  <section class="use">
-    <div class="sec-label"><span class="num">03</span><span class="ttl">이용 방법</span></div>
-    <p>
-      포인트를 충전해두면, 글이 올라갈 때마다 <span class="accent">자동으로 차감</span>됩니다.
-      매번 결제할 필요가 없습니다.<br><br>
-      그리고 가입하시면, 첫 글을 위한 포인트를 드립니다.
-      <span class="gr">먼저 써보고</span> 결정하세요.
-    </p>
+  <!-- 이용 방법 -->
+  <section>
+    <div class="use">
+      <h2>첫 글은, 무료입니다.</h2>
+      <p>포인트를 충전해두면, 글이 올라갈 때마다 <b>자동으로 차감</b>됩니다.
+         매번 결제할 필요가 없습니다. 가입하면 첫 글을 위한 포인트를 드리니,
+         <b>먼저 써보고</b> 결정하세요.</p>
+      <a class="btn-white" href="order.html">시작하기 →</a>
+    </div>
   </section>
-
-  <!-- 마무리 -->
-  <div class="final">
-    <h2 class="serif">첫 글은, <span class="gold">무료</span>입니다.</h2>
-    <a class="go" href="order.html">시작하기 →</a>
-  </div>
 
   <footer>
     <span>BlogStudio · 블로그 자동 포스팅</span>
     <span>문의 — 카카오톡 채널</span>
   </footer>
-
 </div>
+
 </body>
 </html>

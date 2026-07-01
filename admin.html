@@ -5,37 +5,46 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
 <title>BlogStudio 관리자</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root{ --green:#1c4a3b; --gold:#a8763a; --cream:#f7f4ec; --line:#e3ddd0; --ink:#2a2a26; }
+  :root{ --bg:#f6f8f9; --card:#fff; --green:#12805c; --green2:#0e6a4c; --tint:#e8f6f0;
+    --line:#e5e7eb; --ink:#111827; --soft:#6b7280; }
   *{ box-sizing:border-box; }
-  body{ margin:0; background:var(--cream); color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif; }
-  .serif{ font-family:"Nanum Myeongjo",Georgia,serif; }
-  header{ background:var(--green); color:#fff; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; }
-  header .brand{ font-size:20px; font-weight:700; }
-  header .brand span{ color:#e8c98a; }
-  header .who{ font-size:13px; opacity:.85; }
-  header .logout{ margin-left:12px; cursor:pointer; text-decoration:underline; font-size:13px; }
-  .wrap{ max-width:820px; margin:0 auto; padding:22px 16px 60px; }
-  .card{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:20px; }
-  h2{ margin:0 0 14px; font-size:17px; color:var(--green); }
-  .count{ color:var(--gold); font-weight:700; }
+  body{ margin:0; background:var(--bg); color:var(--ink); line-height:1.6;
+    font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    -webkit-font-smoothing:antialiased; }
+  header{ background:var(--card); border-bottom:1px solid var(--line); color:var(--ink);
+    padding:16px 20px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:10; }
+  header .brand{ font-size:18px; font-weight:800; letter-spacing:-.02em; }
+  header .brand span{ color:var(--green); }
+  header .who{ font-size:13px; color:var(--soft); }
+  header .logout{ margin-left:6px; cursor:pointer; font-size:13px; color:var(--soft); }
+  header .logout:hover{ color:var(--ink); }
+  .wrap{ max-width:840px; margin:0 auto; padding:24px 16px 60px; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:20px; margin-bottom:18px; box-shadow:0 1px 3px rgba(17,24,39,.04); }
+  h2{ margin:0 0 16px; font-size:16px; font-weight:800; color:var(--ink); letter-spacing:-.01em;
+    display:flex; align-items:center; gap:8px; }
+  .count{ color:var(--green); font-weight:800; background:var(--tint); padding:2px 10px; border-radius:20px; font-size:13px; }
   table{ width:100%; border-collapse:collapse; font-size:14px; }
-  th,td{ text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); }
-  th{ color:#7a7568; font-weight:600; font-size:12px; }
-  .empty{ color:#999; padding:14px 4px; font-size:14px; }
-  button{ border:none; border-radius:8px; padding:7px 12px; font-size:13px; font-weight:600; cursor:pointer; }
-  .ok{ background:var(--green); color:#fff; }
-  .no{ background:#eee; color:#555; }
-  .danger{ background:#c0392b; color:#fff; }
-  .warn{ background:#e67e22; color:#fff; }
-  .badge{ display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
-  .bd-sus{ background:#fbe3e0; color:#c0392b; }
-  .bd-adm{ background:#e6efe9; color:var(--green); }
-  .gate{ max-width:420px; margin:80px auto; text-align:center; padding:24px; }
-  .gate a,.gate button.link{ display:inline-block; margin-top:14px; background:var(--green); color:#fff; padding:10px 18px; border-radius:8px; text-decoration:none; }
-  .muted{ color:#8a8578; font-size:13px; }
+  th,td{ text-align:left; padding:11px 8px; border-bottom:1px solid var(--line); }
+  th{ color:var(--soft); font-weight:700; font-size:11.5px; letter-spacing:.02em; text-transform:uppercase; }
+  tr:last-child td{ border-bottom:none; }
+  .empty{ color:var(--soft); padding:16px 4px; font-size:14px; }
+  button{ border:none; border-radius:8px; padding:8px 13px; font-size:13px; font-weight:700; cursor:pointer; transition:.15s; }
+  .ok{ background:var(--green); color:#fff; } .ok:hover{ background:var(--green2); }
+  .no{ background:#f3f4f6; color:#4b5563; } .no:hover{ background:#e5e7eb; }
+  .danger{ background:#fef2f2; color:#dc2626; } .danger:hover{ background:#fee2e2; }
+  .badge{ display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; }
+  .bd-sus{ background:#fef2f2; color:#dc2626; }
+  .bd-adm{ background:var(--tint); color:var(--green); }
+  .gate{ max-width:420px; margin:90px auto; text-align:center; padding:36px 28px;
+    background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:0 8px 30px rgba(17,24,39,.06); }
+  .gate a,.gate button.link{ display:inline-block; margin-top:16px; background:var(--green); color:#fff;
+    padding:11px 20px; border-radius:10px; text-decoration:none; font-weight:700; font-size:14px; border:none; cursor:pointer; }
+  .muted{ color:var(--soft); font-size:13px; }
   .amt{ font-variant-numeric:tabular-nums; }
 </style>
 </head>
@@ -45,7 +54,7 @@
 
 <div id="panel" style="display:none;">
   <header>
-    <div class="brand serif">Blog<span>Studio</span> 관리자</div>
+    <div class="brand">Blog<span>Studio</span> 관리자</div>
     <div><span class="who" id="who"></span><span class="logout" onclick="logout()">로그아웃</span></div>
   </header>
   <div class="wrap">
@@ -78,15 +87,15 @@ function showGate(html){
 async function boot(){
   const { data:{ session } } = await sb.auth.getSession();
   if(!session){
-    showGate('<div class="serif" style="font-size:20px;color:#1c4a3b;">관리자 로그인</div>'
-      +'<p class="muted">주문 페이지에서 로그인한 뒤 다시 들어오세요.</p>'
+    showGate('<div style="font-size:20px;font-weight:800;color:#111827;">관리자 로그인</div>'
+      +'<p class="muted" style="margin-top:8px;">주문 페이지에서 로그인한 뒤 다시 들어오세요.</p>'
       +'<a href="order.html">로그인하러 가기</a>');
     return;
   }
   // 관리자 여부 확인 (RLS: 본인 프로필 조회)
   const { data:me } = await sb.from('profiles').select('nickname,is_admin').eq('id', session.user.id).single();
   if(!me || !me.is_admin){
-    showGate('<div class="serif" style="font-size:20px;color:#c0392b;">접근 권한 없음</div>'
+    showGate('<div style="font-size:20px;font-weight:800;color:#dc2626;">접근 권한 없음</div>'
       +'<p class="muted">이 화면은 관리자 전용입니다.</p>'
       +'<button class="link" onclick="logout()">로그아웃</button>');
     return;
