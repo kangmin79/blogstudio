@@ -177,9 +177,11 @@
         <div class="t">내 블로그</div><div class="d">내 네이버 블로그에 대행</div></div>
     </div>
     <div class="reveal" id="rv-customer">
-      <label class="fld">네이버 블로그 주소 또는 아이디</label>
-      <input type="text" id="naver_id" placeholder="blog.naver.com/myid 또는 아이디">
-      <div class="hint">비밀번호는 다음 단계에서 안전하게 입력받습니다.</div>
+      <label class="fld">네이버 아이디</label>
+      <input type="text" id="naver_id" placeholder="네이버 로그인 아이디" autocomplete="off">
+      <label class="fld">네이버 비밀번호</label>
+      <input type="password" id="naver_pw" placeholder="네이버 로그인 비밀번호" autocomplete="new-password">
+      <div class="hint">🔒 손님 블로그에 대신 발행하기 위한 로그인 정보입니다. 대행 발행 용도로만 사용됩니다.</div>
     </div>
   </div>
 
@@ -406,10 +408,17 @@ function updatePrice(){
   currentPoints=p; pe.textContent=p+'P'; btn.disabled=false;
 }
 document.getElementById('submitBtn').addEventListener('click', async ()=>{
+  // 손님 블로그면 아이디/비번 필수
+  if(order.target==='customer'){
+    const nid = document.getElementById('naver_id').value.trim();
+    const npw = document.getElementById('naver_pw').value;
+    if(!nid || !npw){ alert('내 블로그 대행은 네이버 아이디와 비밀번호가 필요합니다.'); return; }
+  }
   const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='처리 중...';
   const { data, error } = await sb.rpc('place_order', {
     p_target: order.target,
     p_naver_id: document.getElementById('naver_id').value || null,
+    p_naver_pw: document.getElementById('naver_pw').value || null,
     p_copy_mode: order.copy,
     p_copy_topic: document.getElementById('copy_topic').value || null,
     p_copy_must: document.getElementById('copy_must').value || null,
