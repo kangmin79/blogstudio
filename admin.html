@@ -46,6 +46,17 @@
     padding:11px 20px; border-radius:10px; text-decoration:none; font-weight:700; font-size:14px; border:none; cursor:pointer; }
   .muted{ color:var(--soft); font-size:13px; }
   .amt{ font-variant-numeric:tabular-nums; }
+  .fl{ display:block; font-size:12.5px; font-weight:700; margin:13px 0 5px; color:var(--ink); }
+  .fi{ width:100%; border:1px solid var(--line); border-radius:9px; padding:10px 11px; font-size:14px;
+    font-family:inherit; outline:none; }
+  .fi:focus{ border-color:var(--green); box-shadow:0 0 0 3px var(--tint); }
+  .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .mtitle{ font-size:17px; font-weight:800; margin-bottom:2px; }
+  .msub{ font-size:12.5px; color:var(--soft); margin-bottom:10px; }
+  .chip{ display:inline-block; font-size:11.5px; font-weight:700; background:var(--tint); color:var(--green);
+    padding:2px 9px; border-radius:20px; margin:0 4px 4px 0; }
+  .rline{ display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--line); }
 </style>
 </head>
 <body>
@@ -69,7 +80,18 @@
       <div id="uBox"></div>
     </div>
 
+    <div class="card">
+      <h2>📊 순위 리포트 <span class="count" id="plCount">0</span>곳
+        <button class="ok" style="margin-left:auto;" onclick="openPlaceForm()">+ 새 가게</button></h2>
+      <div id="plBox"></div>
+    </div>
+
   </div>
+</div>
+
+<!-- 모달 -->
+<div id="modal" style="display:none; position:fixed; inset:0; background:rgba(17,24,39,.45); z-index:50; overflow-y:auto;">
+  <div id="modalCard" style="max-width:560px; margin:40px auto; background:#fff; border-radius:16px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,.25);"></div>
 </div>
 
 <script>
@@ -103,7 +125,7 @@ async function boot(){
   document.getElementById('gate').style.display='none';
   document.getElementById('panel').style.display='block';
   document.getElementById('who').textContent = (me.nickname||'관리자')+'님 · ';
-  loadCharges(); loadUsers();
+  loadCharges(); loadUsers(); loadPlaces();
 }
 
 async function loadCharges(){
@@ -170,6 +192,136 @@ async function suspend(id, on){
   await loadUsers();
 }
 async function logout(){ await sb.auth.signOut(); location.href='order.html'; }
+
+/* ============== 순위 리포트 관리 ============== */
+const reportBase = location.origin + location.pathname.replace(/admin\.html$/, '') + 'report.html';
+function openModal(html){ document.getElementById('modalCard').innerHTML=html; document.getElementById('modal').style.display='block'; }
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+document.getElementById('modal').addEventListener('click', e=>{ if(e.target.id==='modal') closeModal(); });
+const today = ()=> new Date().toISOString().slice(0,10);
+const thisMonth = ()=> today().slice(0,7)+'-01';
+
+let PLACES=[];
+async function loadPlaces(){
+  const { data, error } = await sb.rpc('admin_list_places');
+  const box=document.getElementById('plBox');
+  if(error){ box.innerHTML='<div class="empty">불러오기 오류: '+esc(error.message)+'</div>'; return; }
+  PLACES = data||[];
+  document.getElementById('plCount').textContent = PLACES.length;
+  if(!PLACES.length){ box.innerHTML='<div class="empty">등록된 가게가 없습니다. [+ 새 가게]로 추가하세요.</div>'; return; }
+  let h='<table><tr><th>상호</th><th>지역·업종</th><th>키워드</th><th></th></tr>';
+  for(const p of PLACES){
+    const kwN=(p.target_keywords||[]).length;
+    h+='<tr><td><b>'+esc(p.name)+'</b></td>'
+      +'<td class="muted">'+esc([p.region,p.biztype].filter(Boolean).join(' · ')||'-')+'</td>'
+      +'<td class="amt">'+kwN+'개</td>'
+      +'<td style="white-space:nowrap;">'
+      +'<button class="ok" onclick="openPlace(\''+p.id+'\')">입력</button> '
+      +'<button class="no" onclick="copyLink(\''+p.share_token+'\')">링크복사</button> '
+      +'<button class="no" onclick="openPlaceForm(\''+p.id+'\')">수정</button> '
+      +'<button class="danger" onclick="delPlace(\''+p.id+'\',\''+esc(p.name).replace(/\x27/g,"")+'\')">삭제</button></td></tr>';
+  }
+  box.innerHTML=h+'</table>';
+}
+function copyLink(token){
+  const url = reportBase+'?t='+token;
+  navigator.clipboard.writeText(url).then(()=>alert('리포트 링크 복사됨!\n\n'+url+'\n\n사장님께 이 링크를 보내세요.'),
+    ()=>prompt('아래 링크를 복사하세요:', url));
+}
+function openPlaceForm(id){
+  const p = id? PLACES.find(x=>x.id===id) : {};
+  openModal(
+    '<div class="mtitle">'+(id?'가게 수정':'새 가게 등록')+'</div>'
+    +'<div class="msub">추적할 키워드는 쉼표로 구분해 넣으세요.</div>'
+    +'<label class="fl">상호명 *</label><input class="fi" id="pf_name" value="'+esc(p.name||'')+'" placeholder="예: 미소플러스치과">'
+    +'<div class="row2"><div><label class="fl">지역</label><input class="fi" id="pf_region" value="'+esc(p.region||'')+'" placeholder="송도"></div>'
+    +'<div><label class="fl">업종</label><input class="fi" id="pf_biztype" value="'+esc(p.biztype||'')+'" placeholder="치과"></div></div>'
+    +'<label class="fl">네이버 플레이스 URL (선택)</label><input class="fi" id="pf_url" value="'+esc(p.place_url||'')+'" placeholder="https://...">'
+    +'<label class="fl">추적 키워드 (쉼표 구분)</label><input class="fi" id="pf_kw" value="'+esc((p.target_keywords||[]).join(', '))+'" placeholder="송도치과, 송도임플란트">'
+    +'<label class="fl">메모 (선택)</label><input class="fi" id="pf_memo" value="'+esc(p.memo||'')+'">'
+    +'<div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">'
+    +'<button class="no" onclick="closeModal()">취소</button>'
+    +'<button class="ok" onclick="savePlace('+(id?"\'"+id+"\'":'null')+')">저장</button></div>'
+  );
+}
+async function savePlace(id){
+  const name=document.getElementById('pf_name').value.trim();
+  if(!name){ alert('상호명을 넣어주세요.'); return; }
+  const kw=document.getElementById('pf_kw').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const { error } = await sb.rpc('admin_upsert_place',{
+    p_id:id, p_name:name,
+    p_region:document.getElementById('pf_region').value.trim()||null,
+    p_biztype:document.getElementById('pf_biztype').value.trim()||null,
+    p_place_url:document.getElementById('pf_url').value.trim()||null,
+    p_keywords:kw, p_memo:document.getElementById('pf_memo').value.trim()||null });
+  if(error){ alert('저장 실패: '+error.message); return; }
+  closeModal(); await loadPlaces();
+}
+async function delPlace(id,name){
+  if(!confirm('['+name+'] 가게와 모든 순위 기록을 삭제할까요? 되돌릴 수 없습니다.')) return;
+  const { error } = await sb.rpc('admin_delete_place',{ p_id:id });
+  if(error){ alert('삭제 실패: '+error.message); return; }
+  await loadPlaces();
+}
+
+async function openPlace(id){
+  const p = PLACES.find(x=>x.id===id);
+  const { data, error } = await sb.rpc('admin_place_detail',{ p_id:id });
+  if(error){ alert('불러오기 실패: '+error.message); return; }
+  const ranks=data.ranks||[], months=data.months||[];
+  const kws=(p.target_keywords||[]);
+  const kwOpts = kws.length? kws.map(k=>'<option>'+esc(k)+'</option>').join('') : '<option value="">(키워드 없음 — 먼저 수정에서 추가)</option>';
+  let rankRows = ranks.slice(0,12).map(r=>'<div class="rline"><span>'+esc(r.keyword)+' <span class="muted">'+r.checked_on+'</span></span><b>'+(r.rank==null?'순위밖':r.rank+'위')+'</b></div>').join('') || '<div class="muted" style="padding:6px 0">아직 기록 없음</div>';
+  let monRows = months.map(m=>{const s=m.stats||{}; return '<div class="rline"><span>'+esc(m.ym)+'</span><span class="muted">조회 '+(s.views||0)+' · 유입 '+(s.visits||0)+' · 클릭 '+(s.reserve_clicks||0)+'</span></div>';}).join('') || '<div class="muted" style="padding:6px 0">아직 없음</div>';
+  openModal(
+    '<div class="mtitle">'+esc(p.name)+' · 데이터 입력</div>'
+    +'<div class="msub">키워드칩: '+(kws.map(k=>'<span class="chip">'+esc(k)+'</span>').join('')||'없음')+'</div>'
+    +'<div style="background:#f6f8f9;border-radius:12px;padding:14px;margin-bottom:14px;">'
+    +'<div style="font-weight:800;font-size:13.5px;margin-bottom:8px;">🔑 순위 기록</div>'
+    +'<div class="row3">'
+    +'<div><label class="fl">키워드</label><select class="fi" id="rk_kw">'+kwOpts+'</select></div>'
+    +'<div><label class="fl">측정일</label><input class="fi" id="rk_date" type="date" value="'+today()+'"></div>'
+    +'<div><label class="fl">순위 (빈칸=순위밖)</label><input class="fi" id="rk_rank" type="number" min="1" placeholder="예: 7"></div>'
+    +'</div>'
+    +'<button class="ok" style="margin-top:10px;" onclick="saveRank(\''+id+'\')">순위 저장</button>'
+    +'<div style="margin-top:12px;">'+rankRows+'</div>'
+    +'</div>'
+    +'<div style="background:#f6f8f9;border-radius:12px;padding:14px;">'
+    +'<div style="font-weight:800;font-size:13.5px;margin-bottom:8px;">📈 월간 노트 (이번달 한 일 + 통계)</div>'
+    +'<label class="fl">해당 월</label><input class="fi" id="mn_month" type="month" value="'+thisMonth().slice(0,7)+'">'
+    +'<label class="fl">이번달 한 일</label><textarea class="fi" id="mn_work" rows="3" placeholder="블로그 6건 발행, 소식 3건, 소개글 개편..."></textarea>'
+    +'<div class="row3" style="margin-top:8px;">'
+    +'<div><label class="fl">조회수</label><input class="fi" id="mn_views" type="number" min="0"></div>'
+    +'<div><label class="fl">방문유입</label><input class="fi" id="mn_visits" type="number" min="0"></div>'
+    +'<div><label class="fl">예약·클릭</label><input class="fi" id="mn_clicks" type="number" min="0"></div>'
+    +'</div>'
+    +'<button class="ok" style="margin-top:10px;" onclick="saveMonth(\''+id+'\')">월간 노트 저장</button>'
+    +'<div style="margin-top:12px;">'+monRows+'</div>'
+    +'</div>'
+    +'<div style="margin-top:16px;display:flex;gap:8px;justify-content:space-between;align-items:center;">'
+    +'<button class="no" onclick="copyLink(\''+p.share_token+'\')">📋 리포트 링크복사</button>'
+    +'<button class="no" onclick="closeModal()">닫기</button></div>'
+  );
+}
+async function saveRank(id){
+  const kw=document.getElementById('rk_kw').value.trim();
+  if(!kw){ alert('키워드가 없습니다. [수정]에서 추적 키워드를 먼저 추가하세요.'); return; }
+  const rv=document.getElementById('rk_rank').value.trim();
+  const { error } = await sb.rpc('admin_record_rank',{
+    p_place_id:id, p_keyword:kw, p_rank: rv===''? null : parseInt(rv,10),
+    p_checked_on: document.getElementById('rk_date').value || today() });
+  if(error){ alert('저장 실패: '+error.message); return; }
+  openPlace(id); // 새로고침
+}
+async function saveMonth(id){
+  const stats={ views:num('mn_views'), visits:num('mn_visits'), reserve_clicks:num('mn_clicks') };
+  const { error } = await sb.rpc('admin_save_month',{
+    p_place_id:id, p_month: document.getElementById('mn_month').value+'-01',
+    p_work_done: document.getElementById('mn_work').value.trim()||null, p_stats: stats });
+  if(error){ alert('저장 실패: '+error.message); return; }
+  openPlace(id);
+}
+function num(id){ const v=document.getElementById(id).value.trim(); return v===''?0:parseInt(v,10); }
 
 boot();
 </script>

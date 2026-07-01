@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>월간 순위 리포트 · BlogStudio</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{ --bg:#f4f6f7; --card:#fff; --ink:#111827; --soft:#6b7280; --line:#e8ebee;
+    --green:#12805c; --green2:#0e6a4c; --tint:#e8f6f0; --up:#16a34a; --down:#dc2626; --amber:#d97706;}
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--ink); font-family:'Pretendard',-apple-system,'Malgun Gothic',sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.6;}
+  .wrap{max-width:840px; margin:0 auto; padding:26px 18px 70px;}
+
+  /* 헤더 */
+  .top{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;}
+  .brand{font-size:15px; font-weight:800; letter-spacing:-.02em;} .brand span{color:var(--green);}
+  .top .when{font-size:12px; color:var(--soft);}
+  .hero{background:linear-gradient(135deg,var(--green),#0b5b41); color:#fff; border-radius:18px;
+    padding:26px 24px; box-shadow:0 8px 24px rgba(18,128,92,.18);}
+  .hero .rt{font-size:12.5px; font-weight:700; opacity:.9; letter-spacing:.02em;}
+  .hero h1{font-size:26px; font-weight:800; letter-spacing:-.03em; margin:6px 0 4px;}
+  .hero .meta{font-size:13.5px; opacity:.92;}
+
+  /* 정직 배너 */
+  .honest{display:flex; gap:10px; align-items:flex-start; background:#fffbeb; border:1px solid #fde68a;
+    border-radius:12px; padding:13px 15px; margin:16px 0 4px; font-size:12.8px; color:#8a5a08; line-height:1.55;}
+  .honest b{color:#7a4e06;}
+
+  h2.sec{font-size:16px; font-weight:800; margin:30px 4px 12px; letter-spacing:-.02em;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 18px 14px;
+    box-shadow:0 1px 3px rgba(17,24,39,.04); margin-bottom:14px;}
+
+  /* 키워드 순위 카드 */
+  .kw-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .kw-name{font-size:15px; font-weight:800;}
+  .kw-name .q{color:var(--soft); font-weight:600; font-size:12.5px; margin-left:6px;}
+  .kw-now{display:flex; align-items:baseline; gap:8px;}
+  .kw-now .r{font-size:22px; font-weight:800; color:var(--green);}
+  .kw-now .r.out{color:var(--soft); font-size:15px;}
+  .delta{font-size:12.5px; font-weight:800; padding:2px 8px; border-radius:20px;}
+  .delta.up{color:#fff; background:var(--up);} .delta.down{color:#fff; background:var(--down);}
+  .delta.flat{color:var(--soft); background:#eef1f3;}
+  .chart{width:100%; height:120px; margin-top:6px;}
+  .xlab{display:flex; justify-content:space-between; font-size:10.5px; color:#9aa3ab; margin-top:2px;}
+
+  /* 통계 */
+  .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  @media(max-width:560px){ .stat-grid{grid-template-columns:1fr;} }
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px;}
+  .stat .lab{font-size:12px; color:var(--soft); font-weight:700;}
+  .stat .val{font-size:26px; font-weight:800; letter-spacing:-.02em; margin-top:4px;}
+  .stat .mom{font-size:12px; font-weight:800; margin-top:4px;}
+  .stat .mom.up{color:var(--up);} .stat .mom.down{color:var(--down);} .stat .mom.flat{color:var(--soft);}
+
+  /* 이번달 한 일 */
+  .work{white-space:pre-wrap; font-size:14px; color:#333;}
+  .month-tag{display:inline-block; font-size:12px; font-weight:800; color:var(--green);
+    background:var(--tint); padding:3px 10px; border-radius:20px; margin-bottom:8px;}
+
+  .foot{text-align:center; color:#9aa3ab; font-size:12px; margin-top:34px; line-height:1.7;}
+  .foot b{color:var(--green);}
+  .load,.err{text-align:center; padding:80px 20px; color:var(--soft);}
+  .err .big{font-size:34px; margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="load" id="load">리포트 불러오는 중…</div>
+</div>
+
+<script>
+const SB='https://enqsuymbsugrkmstewek.supabase.co';
+const ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucXN1eW1ic3Vncmttc3Rld2VrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDg1MzQsImV4cCI6MjA5ODQyNDUzNH0.LsVx4Eob26nBQ_sD_VjFoSXPgIQcTTaNSql48gdvgLM';
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const token=new URLSearchParams(location.search).get('t');
+const fmtN=n=>Number(n||0).toLocaleString('ko-KR');
+const mdShort=d=>{const [_,m,day]=d.split('-'); return `${+m}/${+day}`;};
+
+function showErr(msg){
+  document.getElementById('wrap').innerHTML =
+    `<div class="err"><div class="big">🔗</div>${esc(msg)}</div>`;
+}
+
+async function load(){
+  if(!token){ showErr('리포트 주소가 올바르지 않습니다. (링크를 다시 확인해주세요)'); return; }
+  try{
+    const res=await fetch(SB+'/rest/v1/rpc/place_report_public',{method:'POST',
+      headers:{'apikey':ANON,'Authorization':'Bearer '+ANON,'Content-Type':'application/json'},
+      body:JSON.stringify({p_token:token})});
+    const data=await res.json();
+    if(!res.ok || !data){ showErr('리포트를 찾을 수 없습니다. 링크가 만료되었거나 잘못되었습니다.'); return; }
+    render(data);
+  }catch(e){ showErr('불러오기 오류: '+e.message); }
+}
+
+// 키워드별로 순위 시계열 묶기
+function groupByKeyword(ranks){
+  const m={};
+  ranks.forEach(r=>{ (m[r.keyword]=m[r.keyword]||[]).push(r); });
+  Object.values(m).forEach(a=>a.sort((x,y)=>x.checked_on<y.checked_on?-1:1));
+  return m;
+}
+
+// 순위 추이 SVG (rank 낮을수록 위=좋음, 즉 y축 반전). null(순위밖)은 선 끊김.
+function rankChart(series){
+  const W=760,H=120,padL=8,padR=8,padT=14,padB=10;
+  const vals=series.filter(p=>p.rank!=null).map(p=>p.rank);
+  if(vals.length===0) return '<div style="padding:18px 0;color:#9aa3ab;font-size:13px">아직 순위권(측정 범위) 밖입니다. 노출을 끌어올리는 중이에요.</div>';
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  if(hi===lo){ hi=lo+2; lo=Math.max(1,lo-2); }        // 평평하면 여유
+  const n=series.length;
+  const x=i=> padL + (n<=1?0:(i/(n-1))*(W-padL-padR));
+  const y=r=> padT + ((r-lo)/(hi-lo))*(H-padT-padB); // rank 클수록(나쁠수록) 아래
+  // 실선 경로 (null 만나면 끊고 다시 시작)
+  let d='',started=false, dots='';
+  series.forEach((p,i)=>{
+    if(p.rank==null){ started=false; return; }
+    const px=x(i).toFixed(1), py=y(p.rank).toFixed(1);
+    d += (started?' L':' M')+px+' '+py; started=true;
+    dots += `<circle cx="${px}" cy="${py}" r="3.5" fill="#12805c"/>`;
+    if(i===n-1) dots += `<text x="${px}" y="${(+py-9)}" text-anchor="middle" font-size="12" font-weight="800" fill="#0e6a4c">${p.rank}위</text>`;
+  });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <path d="${d}" fill="none" stroke="#12805c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}</svg>`;
+}
+
+function deltaBadge(series){
+  const pts=series.filter(p=>p.rank!=null);
+  if(pts.length<2) return '';
+  const first=pts[0].rank, last=pts[pts.length-1].rank;
+  const diff=first-last; // +면 순위 상승(숫자 감소=좋음)
+  if(diff>0) return `<span class="delta up">▲ ${diff}단계 상승</span>`;
+  if(diff<0) return `<span class="delta down">▼ ${-diff}단계 하락</span>`;
+  return `<span class="delta flat">유지</span>`;
+}
+
+function momBadge(cur,prev){
+  if(prev==null||prev===0) return '';
+  const p=Math.round(((cur-prev)/prev)*100);
+  if(p>0) return `<div class="mom up">▲ ${p}% (전월 대비)</div>`;
+  if(p<0) return `<div class="mom down">▼ ${-p}% (전월 대비)</div>`;
+  return `<div class="mom flat">전월과 동일</div>`;
+}
+
+function render(d){
+  const p=d.place||{}, ranks=d.ranks||[], months=d.months||[];
+  const groups=groupByKeyword(ranks);
+  const allDates=[...new Set(ranks.map(r=>r.checked_on))].sort();
+  const period = allDates.length? `${allDates[0].replace(/-/g,'.')} ~ ${allDates[allDates.length-1].replace(/-/g,'.')}` : '';
+
+  let h='';
+  // 헤더
+  h+=`<div class="top"><div class="brand">Blog<span>Studio</span></div><div class="when">${period?('측정기간 '+period):''}</div></div>`;
+  h+=`<div class="hero"><div class="rt">📊 월간 네이버 플레이스 순위 리포트</div>
+      <h1>${esc(p.name||'')}</h1>
+      <div class="meta">${[p.region,p.biztype].filter(Boolean).map(esc).join(' · ')||''}</div></div>`;
+
+  h+=`<div class="honest">⚠️<div><b>정직하게 알려드립니다.</b> 네이버 순위는 알고리즘·경쟁 상황에 따라 늘 변동합니다.
+      특정 순위를 보장하지 않으며, 실제 측정한 <b>순위 추이</b>와 <b>유입 성장</b>을 있는 그대로 보여드립니다.</div></div>`;
+
+  // 키워드 순위 추이
+  const kws = (p.target_keywords&&p.target_keywords.length? p.target_keywords : Object.keys(groups));
+  h+=`<h2 class="sec">🔑 타겟 키워드 순위 추이</h2>`;
+  if(Object.keys(groups).length===0){
+    h+=`<div class="card" style="color:#9aa3ab">아직 측정된 순위 데이터가 없습니다.</div>`;
+  } else {
+    kws.forEach(kw=>{
+      const s=groups[kw]; if(!s) return;
+      const pts=s.filter(x=>x.rank!=null);
+      const nowR = pts.length? pts[pts.length-1].rank : null;
+      const nowHtml = nowR!=null? `<span class="r">${nowR}위</span>` : `<span class="r out">순위권 밖</span>`;
+      h+=`<div class="card">
+        <div class="kw-head">
+          <div class="kw-name">${esc(kw)} <span class="q">네이버 검색</span></div>
+          <div class="kw-now">${nowHtml}${deltaBadge(s)}</div>
+        </div>
+        ${rankChart(s)}
+        <div class="xlab"><span>${s.length?mdShort(s[0].checked_on):''}</span><span>${s.length?mdShort(s[s.length-1].checked_on):''}</span></div>
+      </div>`;
+    });
+  }
+
+  // 스마트플레이스 통계 (최신월 + 전월대비)
+  if(months.length){
+    const last=months[months.length-1], prev=months.length>1?months[months.length-2]:null;
+    const st=last.stats||{}, pst=(prev&&prev.stats)||{};
+    h+=`<h2 class="sec">📈 스마트플레이스 통계 <span style="font-size:12.5px;color:var(--soft);font-weight:600">· ${esc(last.ym)}</span></h2>`;
+    h+=`<div class="stat-grid">
+      <div class="stat"><div class="lab">플레이스 조회수</div><div class="val">${fmtN(st.views)}</div>${momBadge(st.views,pst.views)}</div>
+      <div class="stat"><div class="lab">방문 유입</div><div class="val">${fmtN(st.visits)}</div>${momBadge(st.visits,pst.visits)}</div>
+      <div class="stat"><div class="lab">예약·전화·길찾기 클릭</div><div class="val">${fmtN(st.reserve_clicks)}</div>${momBadge(st.reserve_clicks,pst.reserve_clicks)}</div>
+    </div>`;
+  }
+
+  // 이번달 한 일 (최신월부터)
+  const withWork = months.filter(m=>m.work_done && m.work_done.trim());
+  if(withWork.length){
+    h+=`<h2 class="sec">✅ 이번 기간에 한 일</h2>`;
+    withWork.slice().reverse().forEach(m=>{
+      h+=`<div class="card"><span class="month-tag">${esc(m.ym)}</span><div class="work">${esc(m.work_done)}</div></div>`;
+    });
+  }
+
+  h+=`<div class="foot"><b>Blog<span>Studio</span></b> · 정직하게, 숫자로 증명하는 플레이스 관리<br>이 리포트는 실제 측정 데이터로 만들어졌습니다.</div>`;
+
+  document.getElementById('wrap').innerHTML=h;
+}
+load();
+</script>
+</body>
+</html>
