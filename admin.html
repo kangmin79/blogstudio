@@ -273,6 +273,8 @@ async function openPlace(id){
   const kwOpts = kws.length? kws.map(k=>'<option>'+esc(k)+'</option>').join('') : '<option value="">(키워드 없음 — 먼저 수정에서 추가)</option>';
   let rankRows = ranks.slice(0,12).map(r=>{const tn=(r.top_list||[]).length; return '<div class="rline"><span>'+esc(r.keyword)+' <span class="muted">'+r.checked_on+(tn?' · 상위'+tn:'')+'</span></span><b>'+(r.rank==null?'순위밖':r.rank+'위')+'</b></div>';}).join('') || '<div class="muted" style="padding:6px 0">아직 기록 없음</div>';
   let monRows = months.map(m=>{const s=m.stats||{}; return '<div class="rline"><span>'+esc(m.ym)+'</span><span class="muted">조회 '+(s.views||0)+' · 유입 '+(s.visits||0)+' · 클릭 '+(s.reserve_clicks||0)+'</span></div>';}).join('') || '<div class="muted" style="padding:6px 0">아직 없음</div>';
+  const profiles=data.profiles||[];
+  let profRows = profiles.map(pr=>'<div class="rline"><span>'+esc(pr.subject)+(pr.is_ours?' <span class="chip">우리</span>':'')+'</span><span class="muted">방문 '+(pr.visitor_reviews==null?'-':pr.visitor_reviews)+' · 블로그 '+(pr.blog_reviews==null?'-':pr.blog_reviews)+' · 답변 '+(pr.reply_rate==null?'-':pr.reply_rate+'%')+'</span></div>').join('') || '<div class="muted" style="padding:6px 0">아직 없음</div>';
   openModal(
     '<div class="mtitle">'+esc(p.name)+' · 데이터 입력</div>'
     +'<div class="msub">키워드칩: '+(kws.map(k=>'<span class="chip">'+esc(k)+'</span>').join('')||'없음')+'</div>'
@@ -299,6 +301,24 @@ async function openPlace(id){
     +'</div>'
     +'<button class="ok" style="margin-top:10px;" onclick="saveMonth(\''+id+'\')">월간 노트 저장</button>'
     +'<div style="margin-top:12px;">'+monRows+'</div>'
+    +'</div>'
+    +'<div style="background:#f6f8f9;border-radius:12px;padding:14px;margin-top:14px;">'
+    +'<div style="font-weight:800;font-size:13.5px;margin-bottom:8px;">📍 플레이스 프로파일 (우리 + 경쟁사)</div>'
+    +'<div class="row2"><div><label class="fl">업체명</label><input class="fi" id="pf_subj" placeholder="우리 상호 또는 경쟁사명"></div>'
+    +'<div><label class="fl">측정일</label><input class="fi" id="pf_pdate" type="date" value="'+today()+'"></div></div>'
+    +'<label class="fl" style="display:flex;align-items:center;gap:7px;margin-top:10px;cursor:pointer;"><input type="checkbox" id="pf_ours" style="width:auto;"> 우리 가게 (리포트에서 하이라이트)</label>'
+    +'<div class="row3" style="margin-top:8px;"><div><label class="fl">방문자리뷰</label><input class="fi" id="pf_vr" type="number" min="0"></div>'
+    +'<div><label class="fl">블로그리뷰</label><input class="fi" id="pf_br" type="number" min="0"></div>'
+    +'<div><label class="fl">답변율(%)</label><input class="fi" id="pf_rr" type="number" min="0" max="100"></div></div>'
+    +'<div class="row3" style="margin-top:8px;"><div><label class="fl">최근소식(일 전)</label><input class="fi" id="pf_nd" type="number" min="0"></div>'
+    +'<div><label class="fl">사진 수</label><input class="fi" id="pf_ph" type="number" min="0"></div>'
+    +'<div><label class="fl">버튼</label><div style="display:flex;gap:9px;align-items:center;height:40px;font-size:12.5px;">'
+    +'<label style="display:flex;gap:4px;align-items:center;cursor:pointer;"><input type="checkbox" id="pf_book" style="width:auto;">예약</label>'
+    +'<label style="display:flex;gap:4px;align-items:center;cursor:pointer;"><input type="checkbox" id="pf_talk" style="width:auto;">톡톡</label>'
+    +'<label style="display:flex;gap:4px;align-items:center;cursor:pointer;"><input type="checkbox" id="pf_coupon" style="width:auto;">쿠폰</label></div></div></div>'
+    +'<label class="fl">리뷰 키워드 (쉼표 · 우리것만 권장)</label><input class="fi" id="pf_kw2" placeholder="친절해요, 설명이 자세해요">'
+    +'<button class="ok" style="margin-top:10px;" onclick="saveProfile(\''+id+'\')">프로파일 저장</button>'
+    +'<div style="margin-top:12px;">'+profRows+'</div>'
     +'</div>'
     +'<div style="margin-top:16px;display:flex;gap:8px;justify-content:space-between;align-items:center;">'
     +'<button class="no" onclick="copyLink(\''+p.share_token+'\')">📋 리포트 링크복사</button>'
@@ -332,6 +352,24 @@ async function saveMonth(id){
   openPlace(id);
 }
 function num(id){ const v=document.getElementById(id).value.trim(); return v===''?0:parseInt(v,10); }
+function numOrNull(id){ const v=document.getElementById(id).value.trim(); return v===''?null:parseInt(v,10); }
+async function saveProfile(id){
+  const subj=document.getElementById('pf_subj').value.trim();
+  if(!subj){ alert('업체명을 넣어주세요.'); return; }
+  const kws=(document.getElementById('pf_kw2').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const dataObj={
+    visitor_reviews:numOrNull('pf_vr'), blog_reviews:numOrNull('pf_br'), reply_rate:numOrNull('pf_rr'),
+    news_days:numOrNull('pf_nd'), photos:numOrNull('pf_ph'),
+    has_booking:document.getElementById('pf_book').checked,
+    has_talk:document.getElementById('pf_talk').checked,
+    has_coupon:document.getElementById('pf_coupon').checked,
+    review_keywords:kws };
+  const { error } = await sb.rpc('admin_upsert_profile',{
+    p_place_id:id, p_subject:subj, p_is_ours:document.getElementById('pf_ours').checked,
+    p_checked_on:document.getElementById('pf_pdate').value||today(), p_data:dataObj });
+  if(error){ alert('저장 실패: '+error.message); return; }
+  openPlace(id);
+}
 
 boot();
 </script>

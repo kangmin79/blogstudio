@@ -13,7 +13,7 @@
     --gold:#c79a3a; --gold-s:rgba(199,154,58,.14);
     --bg:#f7f6f1; --card:#fff; --input:#f0efeb;
     --text:#16231d; --sub:#4b5a52; --light:#7c8a82; --border:#e5e1d6;
-    --good:#2e7d57; --bad:#c0392b; --tint:#edf5f1;
+    --good:#2e7d57; --bad:#c0392b; --tint:#edf5f1; --line:#f0f2ed;
     --sans:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
@@ -88,6 +88,32 @@
     border:1px solid #cfe6dc; padding:2px 7px; border-radius:20px;}
   .rbar-cap{font-size:10px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--light); margin-bottom:9px;}
   .kw-empty{font-size:12.5px; color:var(--light); padding:16px 0;}
+
+  /* 세팅 완성도 */
+  .setup-score{display:flex; align-items:center; gap:16px; margin-bottom:15px;}
+  .setup-score .pct{font-size:34px; font-weight:800; letter-spacing:-.03em; color:var(--green); line-height:1;}
+  .setup-score .pct small{font-size:14px; color:var(--light); font-weight:700;}
+  .setup-bar{flex:1; height:10px; background:var(--input); border-radius:6px; overflow:hidden;}
+  .setup-bar i{display:block; height:100%; background:linear-gradient(90deg,var(--green),#0c5f44); border-radius:6px;}
+  .check-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  @media(max-width:560px){ .check-grid{grid-template-columns:1fr;} }
+  .chk{display:flex; align-items:center; gap:9px; font-size:13px; padding:9px 11px; border-radius:10px; background:#f7f9f8;}
+  .chk.on{color:var(--text);} .chk.off{color:var(--light);}
+  .chk .mk{width:18px; height:18px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex:none; color:#fff;}
+  .chk.on .mk{background:var(--green);} .chk.off .mk{background:#d7dcd8;}
+  .rvkw{display:flex; flex-wrap:wrap; gap:7px; margin-top:6px;}
+  .rvkw span{font-size:12px; color:var(--sub); background:#f4f6f5; border:1px solid var(--line); padding:4px 11px; border-radius:20px;}
+
+  /* 프로파일 비교표 */
+  .ptbl{width:100%; border-collapse:collapse; font-size:12.8px; min-width:440px;}
+  .ptbl th{font-size:10px; font-weight:700; letter-spacing:.04em; color:var(--light); text-transform:uppercase; text-align:right; padding:9px 8px; border-bottom:1px solid var(--border); white-space:nowrap;}
+  .ptbl th:first-child{text-align:left;}
+  .ptbl td{padding:11px 8px; border-bottom:1px solid var(--line); text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .ptbl td:first-child{text-align:left; font-weight:700;}
+  .ptbl tr.ours{background:var(--tint);}
+  .ptbl tr.ours td:first-child{color:var(--green); font-weight:800;}
+  .bchip{display:inline-block; font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; margin-left:3px;}
+  .bchip.on{color:var(--green); background:var(--tint);} .bchip.off{color:#c3c8c4; background:#f3f5f4;}
 
   /* KPI */
   .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
@@ -176,6 +202,46 @@ function momTxt(cur,prev,cls){
   return `<div class="${cls} flat">전월과 동일</div>`;
 }
 
+// 세팅 완성도 (우리 프로파일)
+function setupPanel(ours){
+  if(!ours) return '';
+  const items=[
+    {on: ours.has_booking, l:'예약 버튼'},
+    {on: ours.has_talk, l:'톡톡 상담'},
+    {on: ours.has_coupon, l:'쿠폰 발급'},
+    {on: ours.news_days!=null && ours.news_days<=30, l:'최근 소식(30일 내)'},
+    {on: (ours.photos||0)>=10, l:'대표 사진 10장 이상'},
+    {on: (ours.reply_rate||0)>=50, l:'리뷰 답변 활발'},
+  ];
+  const done=items.filter(i=>i.on).length, pct=Math.round(done/items.length*100);
+  const grid=items.map(i=>`<div class="chk ${i.on?'on':'off'}"><span class="mk">${i.on?'✓':'!'}</span>${esc(i.l)}</div>`).join('');
+  const kw=(ours.review_keywords&&ours.review_keywords.length)
+    ? `<div style="margin-top:16px"><div class="rbar-cap">우리 리뷰 키워드 (손님이 많이 남긴 말)</div><div class="rvkw">${ours.review_keywords.map(k=>`<span>${esc(k)}</span>`).join('')}</div></div>` : '';
+  return `<div class="panel"><h3>플레이스 세팅 완성도</h3><div class="psub">순위에 직접 영향을 주는 세팅 항목 점검 · 채울수록 상위노출에 유리</div>
+    <div class="setup-score"><div class="pct num">${pct}<small>%</small></div><div class="setup-bar"><i style="width:${pct}%"></i></div></div>
+    <div class="check-grid">${grid}</div>${kw}</div>`;
+}
+// 경쟁사 프로파일 비교표
+function profilePanel(profiles){
+  if(!profiles.length) return '';
+  const bt=(on,t)=>`<span class="bchip ${on?'on':'off'}">${t}</span>`;
+  const rows=profiles.map(p=>{
+    const nd = p.news_days==null?'-':`${p.news_days}일 전`;
+    return `<tr class="${p.is_ours?'ours':''}">
+      <td>${esc(p.subject)}${p.is_ours?' · 우리':''}</td>
+      <td>${p.visitor_reviews==null?'-':fmtN(p.visitor_reviews)}</td>
+      <td>${p.blog_reviews==null?'-':fmtN(p.blog_reviews)}</td>
+      <td>${p.reply_rate==null?'-':p.reply_rate+'%'}</td>
+      <td>${nd}</td>
+      <td>${bt(p.has_booking,'예약')}${bt(p.has_talk,'톡톡')}${bt(p.has_coupon,'쿠폰')}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="panel"><h3>경쟁사 프로파일 비교</h3><div class="psub">상위 노출 업체와 리뷰·세팅을 나란히 · 방문자리뷰=영수증 인증</div>
+    <div style="overflow-x:auto"><table class="ptbl">
+      <tr><th>업체</th><th>방문자리뷰</th><th>블로그리뷰</th><th>답변율</th><th>최근소식</th><th>버튼</th></tr>
+      ${rows}</table></div></div>`;
+}
+
 let chartRef=null;
 function render(d){
   const p=d.place||{}, ranks=d.ranks||[], months=d.months||[];
@@ -229,6 +295,15 @@ function render(d){
       </div>${topsBars(s)||'<div class="kw-empty">상위 업체 데이터가 아직 없습니다.</div>'}
     </div>`;
   });
+
+  // 플레이스 프로파일 (세팅 완성도 + 경쟁사 비교)
+  const profiles=d.profiles||[];
+  const oursP=profiles.find(x=>x.is_ours);
+  if(profiles.length){
+    h+=`<div class="sec"><h2>플레이스 프로파일</h2><div class="ln"></div></div>`;
+    h+=setupPanel(oursP);
+    h+=profilePanel(profiles);
+  }
 
   // 통계 KPI
   if(months.length){
