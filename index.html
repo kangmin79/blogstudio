@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlogStudio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f6f3ec; --ink:#33302a; --soft:#6d685e; --line:#dcd5c7;
+    --green:#1c4a3b; --green2:#2f5d4d; --gold:#a8763a; --white:#fffefb;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    line-height:1.75; -webkit-font-smoothing:antialiased;
+  }
+  .serif{font-family:'Nanum Myeongjo', serif;}
+  .wrap{max-width:720px; margin:0 auto; padding:0 28px;}
+  a{color:inherit; text-decoration:none;}
+  .gold{color:var(--gold);}
+
+  /* 라벨 (키커) */
+  .kicker{font-size:12px; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--gold); font-weight:700;}
+
+  /* 상단바 */
+  nav{display:flex; align-items:center; justify-content:space-between;
+    padding:26px 0; border-bottom:2px solid var(--green);}
+  .brand{font-family:'Nanum Myeongjo',serif; font-size:21px; font-weight:800;
+    letter-spacing:.01em; color:var(--green);}
+  .nav-link{font-size:14px; font-weight:700; color:var(--green);
+    border-bottom:1px solid var(--gold); padding-bottom:1px;}
+  .nav-link:hover{color:var(--gold);}
+
+  /* 히어로 */
+  .hero{padding:92px 0 84px;}
+  .hero .kicker{margin-bottom:30px;}
+  .hero h1{font-family:'Nanum Myeongjo',serif; font-weight:800; color:var(--green);
+    font-size:52px; line-height:1.34; letter-spacing:-.01em;}
+  .hero p{margin-top:34px; font-size:18px; color:var(--ink); max-width:30em; line-height:1.85;}
+  .hero p b{color:var(--green2);}
+  .hero .go{display:inline-block; margin-top:44px; font-size:16px; font-weight:700; color:var(--white);
+    background:var(--green); padding:13px 28px; border-radius:4px;}
+  .hero .go:hover{background:var(--green2);}
+
+  /* 섹션 */
+  section{padding:76px 0; border-top:1px solid var(--line);}
+  .sec-label{display:flex; align-items:baseline; gap:14px; margin-bottom:40px;}
+  .sec-label .num{font-family:'Nanum Myeongjo',serif; font-size:16px; font-weight:700; color:var(--gold);}
+  .sec-label .ttl{font-size:13px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--green); font-weight:700;}
+
+  /* 매니페스토 */
+  .manifesto p{font-family:'Nanum Myeongjo',serif; font-weight:700; color:var(--green);
+    font-size:38px; line-height:1.55; letter-spacing:-.01em;}
+  .manifesto p .x{color:var(--gold);}
+  .manifesto .close{font-family:inherit; font-weight:400; font-size:16.5px; color:var(--ink);
+    margin-top:38px; line-height:1.9; max-width:34em;}
+  .manifesto .close b{color:var(--green2);}
+
+  /* 작동 방식 */
+  .step{display:grid; grid-template-columns:54px 1fr; gap:22px;
+    padding:30px 0; border-bottom:1px solid var(--line);}
+  .step:last-child{border-bottom:none;}
+  .step .n{font-family:'Nanum Myeongjo',serif; font-size:34px; font-weight:800; color:var(--gold); line-height:1;}
+  .step h3{font-family:'Nanum Myeongjo',serif; font-size:24px; font-weight:700; color:var(--green);}
+  .step p{margin-top:8px; font-size:15.5px; color:var(--ink);}
+
+  /* 이용 방법 */
+  .use p{font-size:18px; color:var(--ink); line-height:1.95; max-width:32em;}
+  .use .accent{color:var(--gold); font-weight:700;}
+  .use .gr{color:var(--green2); font-weight:700;}
+
+  /* 마무리 */
+  .final{text-align:center; padding:100px 0;}
+  .final h2{font-family:'Nanum Myeongjo',serif; font-weight:800; color:var(--green);
+    font-size:44px; letter-spacing:-.01em;}
+  .final .go{display:inline-block; margin-top:36px; font-size:16px; font-weight:700; color:var(--white);
+    background:var(--green); padding:13px 30px; border-radius:4px;}
+  .final .go:hover{background:var(--green2);}
+
+  footer{border-top:2px solid var(--green); padding:32px 0 56px;
+    font-size:13px; color:var(--soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+
+  @media(max-width:600px){
+    .hero{padding:60px 0 56px;}
+    .hero h1{font-size:36px; line-height:1.4;}
+    .manifesto p{font-size:27px;}
+    .final h2{font-size:31px;}
+    .sec-label{margin-bottom:30px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav>
+    <div class="brand">BlogStudio</div>
+    <a class="nav-link" href="order.html">주문하기</a>
+  </nav>
+
+  <!-- 히어로 -->
+  <header class="hero">
+    <div class="kicker">블로그 자동 발행 서비스</div>
+    <h1 class="serif">쓰지 않아도,<br>블로그는 <span class="gold">채워집니다.</span></h1>
+    <p>프로그램도, 관리도 없이. 주문하면 <b>AI가 글을 쓰고, 알아서 발행</b>합니다.
+       사장님은 장사에만 집중하세요.</p>
+    <a class="go" href="order.html">시작하기 →</a>
+  </header>
+
+  <!-- 01 다른 점 -->
+  <section>
+    <div class="sec-label"><span class="num">01</span><span class="ttl">다른 점</span></div>
+    <div class="manifesto">
+      <p>
+        설치가, <span class="x">필요 없습니다.</span><br>
+        켜둔 PC가, <span class="x">필요 없습니다.</span><br>
+        테더링도 관리도, <span class="x">필요 없습니다.</span>
+      </p>
+      <p class="close">
+        기존 프로그램은 사장님께 너무 많은 것을 시켰습니다.
+        직접 사서, 직접 설치하고, 하루 종일 화면을 지켜보게 했죠.
+        BlogStudio는 그 모든 것을 대신합니다. <b>사장님이 할 일은 단 하나, 주문뿐입니다.</b>
+      </p>
+    </div>
+  </section>
+
+  <!-- 02 어떻게 -->
+  <section>
+    <div class="sec-label"><span class="num">02</span><span class="ttl">어떻게</span></div>
+    <div class="steps">
+      <div class="step">
+        <div class="n serif">一</div>
+        <div><h3 class="serif">주문한다</h3>
+          <p>주제와 옵션을 고르고 주문합니다. 가게 정보를 넣으면 글에 자연스럽게 담깁니다.</p></div>
+      </div>
+      <div class="step">
+        <div class="n serif">二</div>
+        <div><h3 class="serif">AI가 만든다</h3>
+          <p>글과 이미지를 자동으로 제작합니다. 직접 쓰거나, 사진을 주셔도 됩니다.</p></div>
+      </div>
+      <div class="step">
+        <div class="n serif">三</div>
+        <div><h3 class="serif">발행된다</h3>
+          <p>완성된 글이 블로그에 올라갑니다. 사장님은 결과만 확인하면 됩니다.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 이용 방법 -->
+  <section class="use">
+    <div class="sec-label"><span class="num">03</span><span class="ttl">이용 방법</span></div>
+    <p>
+      포인트를 충전해두면, 글이 올라갈 때마다 <span class="accent">자동으로 차감</span>됩니다.
+      매번 결제할 필요가 없습니다.<br><br>
+      그리고 가입하시면, 첫 글을 위한 포인트를 드립니다.
+      <span class="gr">먼저 써보고</span> 결정하세요.
+    </p>
+  </section>
+
+  <!-- 마무리 -->
+  <div class="final">
+    <h2 class="serif">첫 글은, <span class="gold">무료</span>입니다.</h2>
+    <a class="go" href="order.html">시작하기 →</a>
+  </div>
+
+  <footer>
+    <span>BlogStudio · 블로그 자동 포스팅</span>
+    <span>문의 — 카카오톡 채널</span>
+  </footer>
+
+</div>
+</body>
+</html>

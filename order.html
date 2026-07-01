@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlogStudio — 주문</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --paper:#f6f3ec; --ink:#33302a; --soft:#6d685e; --line:#dcd5c7;
+    --green:#1c4a3b; --green2:#2f5d4d; --gold:#a8763a; --white:#fffefb; --tint:#eef0e9;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--paper); color:var(--ink);
+    font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; line-height:1.7;}
+  .serif{font-family:'Nanum Myeongjo', serif;}
+  .wrap{max-width:660px; margin:0 auto; padding:0 24px 120px;}
+
+  /* 로그인 게이트 */
+  .gate{position:fixed; inset:0; background:var(--paper); display:flex; align-items:center;
+    justify-content:center; z-index:100; padding:24px;}
+  .gate-box{max-width:360px; width:100%; text-align:center;}
+  .gate-box .brand{font-family:'Nanum Myeongjo',serif; font-size:30px; font-weight:800; color:var(--green);}
+  .gate-box .brand span{color:var(--gold);}
+  .gate-box p{color:var(--soft); margin:12px 0 32px; font-size:15px;}
+  .lbtn{display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+    padding:14px; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer;
+    border:1.5px solid var(--line); background:#fff; margin-bottom:12px; color:#333;}
+  .lbtn:hover{border-color:var(--green2);}
+  .lbtn.kakao{background:#FEE500; border-color:#FEE500; color:#191600;}
+  .lbtn img,.lbtn svg{width:18px; height:18px;}
+  .gate-box .free{margin-top:20px; font-size:13px; color:var(--gold); font-weight:700;}
+
+  /* 상단바 */
+  nav{display:flex; align-items:center; justify-content:space-between;
+    padding:20px 0; border-bottom:2px solid var(--green);}
+  .brand{font-family:'Nanum Myeongjo',serif; font-size:20px; font-weight:800; color:var(--green);}
+  .userbox{display:flex; align-items:center; gap:14px; font-size:13px;}
+  .pts{font-family:'Nanum Myeongjo',serif; font-weight:800; color:var(--gold); font-size:16px;}
+  .logout{color:var(--soft); border-bottom:1px solid var(--soft); cursor:pointer; padding-bottom:1px;}
+
+  .intro{padding:30px 0 6px;}
+  .intro h1{font-family:'Nanum Myeongjo',serif; font-size:28px; font-weight:800; color:var(--green);}
+  .intro p{color:var(--soft); margin-top:8px; font-size:15px;}
+
+  .section{padding:28px 0; border-top:1px solid var(--line);}
+  .step-head{display:flex; align-items:baseline; gap:12px;}
+  .step-head .num{font-family:'Nanum Myeongjo',serif; font-size:15px; font-weight:700; color:var(--gold);}
+  .step-head h2{font-family:'Nanum Myeongjo',serif; font-size:21px; font-weight:700; color:var(--green);}
+  .badge{font-size:11px; font-weight:700; color:var(--gold); border:1px solid var(--gold);
+    padding:2px 8px; border-radius:3px; margin-left:8px; vertical-align:middle;}
+  .step-desc{font-size:13.5px; color:var(--soft); margin:6px 0 16px 27px;}
+
+  .choices{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .choice{position:relative; border:1.5px solid var(--line); border-radius:6px; padding:18px 16px;
+    cursor:pointer; background:var(--white); transition:.15s;}
+  .choice:hover{border-color:var(--green2);}
+  .choice.on{border-color:var(--green); border-width:2px; background:var(--tint); padding:17px 15px;}
+  .choice .t{font-family:'Nanum Myeongjo',serif; font-weight:700; font-size:16px; color:var(--green);}
+  .choice .d{font-size:12.5px; color:var(--soft); margin-top:4px;}
+  .choice .dot{position:absolute; top:14px; right:14px; width:15px; height:15px; border-radius:50%;
+    border:1.5px solid var(--line);}
+  .choice.on .dot{border-color:var(--green); background:var(--green); box-shadow:inset 0 0 0 3px var(--white);}
+
+  .reveal{margin-top:16px; padding-top:16px; border-top:1px dashed var(--line); display:none;}
+  .reveal.show{display:block;}
+  label.fld{display:block; font-size:13px; font-weight:700; color:var(--green2); margin:14px 0 6px;}
+  input[type=text], input[type=tel], textarea{
+    width:100%; border:1.5px solid var(--line); border-radius:6px; padding:11px 12px;
+    font-size:14px; font-family:inherit; background:var(--white); color:var(--ink);}
+  input:focus, textarea:focus{outline:none; border-color:var(--green);}
+  textarea{resize:vertical; min-height:90px;}
+  .hint{font-size:12px; color:var(--soft); margin-top:5px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .upload{display:block; border:1.5px dashed var(--line); border-radius:6px; padding:18px;
+    text-align:center; color:var(--soft); cursor:pointer; font-size:14px;}
+
+  .submit{position:fixed; bottom:0; left:0; right:0; background:var(--white);
+    border-top:2px solid var(--green); padding:14px 16px;}
+  .submit .inner{max-width:660px; margin:0 auto; display:flex; align-items:center; gap:14px;}
+  .submit .price{flex:1; font-size:13px; color:var(--soft);}
+  .submit .price b{font-family:'Nanum Myeongjo',serif; font-size:20px; color:var(--green); display:block; font-weight:800;}
+  .btn{background:var(--green); color:var(--white); border:none; border-radius:5px;
+    padding:14px 30px; font-size:16px; font-weight:700; cursor:pointer;
+    font-family:'Nanum Myeongjo',serif;}
+  .btn:hover{background:var(--green2);}
+  .btn:disabled{background:#c4bdae; cursor:not-allowed;}
+  #app{display:none;}
+</style>
+</head>
+<body>
+
+<!-- 로그인 게이트 -->
+<div class="gate" id="loginGate" style="display:none;">
+  <div class="gate-box">
+    <div class="brand">Blog<span>Studio</span></div>
+    <p>로그인하고 시작하세요.<br>가입하면 무료 포인트를 드립니다.</p>
+    <button class="lbtn kakao" onclick="loginKakao()">
+      <svg viewBox="0 0 24 24" fill="#191600"><path d="M12 3C6.5 3 2 6.5 2 10.8c0 2.8 1.9 5.2 4.7 6.6-.2.7-.7 2.6-.8 3-.1.5.2.5.4.4.2-.1 2.6-1.8 3.7-2.5.7.1 1.4.2 2 .2 5.5 0 10-3.5 10-7.8S17.5 3 12 3z"/></svg>
+      카카오로 시작
+    </button>
+    <!-- 구글 로그인 보류: 카카오 단일 (교차 중복계정 방지). 나중에 전화번호 인증 붙이면 재개.
+    <button class="lbtn" onclick="loginGoogle()">
+      <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.1 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.8 6.1C12.2 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.8-9.9 6.8-17.4z"/><path fill="#FBBC05" d="M10.3 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.1 0 11.3-2 15-5.5l-7.3-5.7c-2 1.4-4.6 2.2-7.7 2.2-6.4 0-11.8-4.1-13.7-9.9l-7.8 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
+      구글로 시작
+    </button>
+    -->
+    <div class="free">가입 시 무료 30P 지급</div>
+  </div>
+</div>
+
+<!-- 주문 앱 -->
+<div id="app">
+<div class="wrap">
+  <nav>
+    <div class="brand">BlogStudio</div>
+    <div class="userbox">
+      <span id="userName" class="soft"></span>
+      <span class="pts" id="userPts">-</span>
+      <span class="logout" onclick="logout()">로그아웃</span>
+    </div>
+  </nav>
+
+  <div class="intro">
+    <h1 class="serif">무엇을 올려드릴까요?</h1>
+    <p>아래만 고르시면 됩니다. 나머지는 저희가 합니다.</p>
+  </div>
+
+  <div class="section">
+    <div class="step-head"><span class="num serif">01</span><h2 class="serif">어디에 발행할까요?</h2></div>
+    <div class="step-desc">가장 중요한 선택입니다.</div>
+    <div class="choices" data-group="target">
+      <div class="choice" data-val="ours"><span class="dot"></span>
+        <div class="t">BlogStudio 블로그</div><div class="d">우리 블로그에 광고 게재</div></div>
+      <div class="choice" data-val="customer"><span class="dot"></span>
+        <div class="t">내 블로그</div><div class="d">내 네이버 블로그에 대행</div></div>
+    </div>
+    <div class="reveal" id="rv-customer">
+      <label class="fld">네이버 블로그 주소 또는 아이디</label>
+      <input type="text" id="naver_id" placeholder="blog.naver.com/myid 또는 아이디">
+      <div class="hint">비밀번호는 다음 단계에서 안전하게 입력받습니다.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="step-head"><span class="num serif">02</span><h2 class="serif">원고는 누가 쓸까요?</h2></div>
+    <div class="step-desc">글을 직접 주시거나, AI가 써드립니다.</div>
+    <div class="choices" data-group="copy">
+      <div class="choice" data-val="ai"><span class="dot"></span>
+        <div class="t">AI가 작성</div><div class="d">주제만 주면 AI가 씀</div></div>
+      <div class="choice" data-val="customer"><span class="dot"></span>
+        <div class="t">내가 작성</div><div class="d">원고를 직접 붙여넣기</div></div>
+    </div>
+    <div class="reveal" id="rv-copy-ai">
+      <label class="fld">어떤 글을 원하세요? (주제·키워드)</label>
+      <textarea id="copy_topic" placeholder="예: 우리 가게 신메뉴 소개 / 마포 맛집 / 분위기 좋은 카페"></textarea>
+      <label class="fld">꼭 넣고 싶은 내용 (선택)</label>
+      <input type="text" id="copy_must" placeholder="예: 주차 가능, 예약 필수, 단체 환영">
+    </div>
+    <div class="reveal" id="rv-copy-customer">
+      <label class="fld">원고를 붙여넣어 주세요</label>
+      <textarea id="copy_text" style="min-height:140px;" placeholder="작성하신 글 전체를 여기에 붙여넣으세요"></textarea>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="step-head"><span class="num serif">03</span><h2 class="serif">이미지는 어떻게 할까요?</h2></div>
+    <div class="step-desc">사진을 주시거나, AI가 만들어드립니다.</div>
+    <div class="choices" data-group="image">
+      <div class="choice" data-val="ai"><span class="dot"></span>
+        <div class="t">AI가 생성</div><div class="d">분위기 이미지 자동 제작</div></div>
+      <div class="choice" data-val="customer"><span class="dot"></span>
+        <div class="t">내 사진 사용</div><div class="d">가게 사진 업로드</div></div>
+    </div>
+    <div class="reveal" id="rv-image-customer">
+      <label class="fld">사진 업로드</label>
+      <label class="upload" for="photo_files">클릭해서 사진 선택 (여러 장 가능)</label>
+      <input type="file" id="photo_files" accept="image/*" multiple style="display:none;">
+      <div class="hint" id="photo_count"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="step-head"><span class="num serif">04</span><h2 class="serif">가게 홍보인가요?</h2><span class="badge">대부분 여기</span></div>
+    <div class="step-desc">가게 정보를 넣으면 글·이미지에 자연스럽게 반영됩니다.</div>
+    <div class="choices" data-group="promo">
+      <div class="choice" data-val="yes"><span class="dot"></span>
+        <div class="t">네, 가게 홍보</div><div class="d">가게 정보 입력</div></div>
+      <div class="choice" data-val="no"><span class="dot"></span>
+        <div class="t">아니요</div><div class="d">일반 정보 글</div></div>
+    </div>
+    <div class="reveal" id="rv-promo-yes">
+      <label class="fld">상호명</label>
+      <input type="text" id="shop_name" placeholder="예: 마포 OO식당">
+      <label class="fld">주소</label>
+      <input type="text" id="shop_addr" placeholder="예: 서울 마포구 OO로 12">
+      <div class="row2">
+        <div><label class="fld">전화번호</label>
+          <input type="tel" id="shop_tel" placeholder="02-000-0000"></div>
+        <div><label class="fld">영업시간</label>
+          <input type="text" id="shop_hours" placeholder="11:00~22:00"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="submit">
+  <div class="inner">
+    <div class="price">차감 포인트<b id="price">선택해 주세요</b></div>
+    <button class="btn" id="submitBtn" disabled>주문하기</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ===== 설정 =====
+const SB_URL  = 'https://enqsuymbsugrkmstewek.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucXN1eW1ic3Vncmttc3Rld2VrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDg1MzQsImV4cCI6MjA5ODQyNDUzNH0.LsVx4Eob26nBQ_sD_VjFoSXPgIQcTTaNSql48gdvgLM';
+const KAKAO_REST = 'dc1eb4bc3a63df77105977a17597a0d0';
+const KAKAO_FN = SB_URL + '/functions/v1/kakao-login';
+const sb = supabase.createClient(SB_URL, SB_ANON);
+const REDIRECT = location.origin + location.pathname;
+
+// ===== 로그인 =====
+function loginGoogle(){
+  sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: REDIRECT } });
+}
+function loginKakao(){
+  location.href = 'https://kauth.kakao.com/oauth/authorize?response_type=code'
+    + '&client_id=' + KAKAO_REST
+    + '&redirect_uri=' + encodeURIComponent(REDIRECT);
+}
+async function handleKakao(code){
+  try{
+    const res = await fetch(KAKAO_FN, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+SB_ANON },
+      body: JSON.stringify({ code, redirect_uri: REDIRECT }),
+    });
+    const j = await res.json();
+    if(!res.ok) throw new Error(j.error || '카카오 로그인 실패');
+    const { error } = await sb.auth.verifyOtp({ token_hash: j.token_hash, type:'email' });
+    if(error) throw error;
+    boot();
+  }catch(e){ alert('카카오 로그인 오류: '+e.message); showLogin(); }
+}
+async function logout(){ await sb.auth.signOut(); location.reload(); }
+
+// ===== 화면 전환 =====
+function showLogin(){ document.getElementById('loginGate').style.display='flex'; document.getElementById('app').style.display='none'; }
+async function showApp(user){
+  document.getElementById('loginGate').style.display='none';
+  document.getElementById('app').style.display='block';
+  const { data } = await sb.from('profiles').select('nickname, point_balance').eq('id', user.id).single();
+  document.getElementById('userName').textContent = (data?.nickname || '회원') + '님';
+  document.getElementById('userPts').textContent = (data?.point_balance ?? 0) + 'P';
+}
+async function boot(){
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if(code){ history.replaceState({}, '', REDIRECT); return handleKakao(code); }
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session) showApp(session.user); else showLogin();
+}
+sb.auth.onAuthStateChange((_e, session)=>{ if(session) showApp(session.user); });
+boot();
+
+// ===== 주문 폼 =====
+const order = { target:null, copy:null, image:null, promo:null };
+document.querySelectorAll('.choices').forEach(group=>{
+  const key = group.dataset.group;
+  group.querySelectorAll('.choice').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      group.querySelectorAll('.choice').forEach(c=>c.classList.remove('on'));
+      ch.classList.add('on'); order[key]=ch.dataset.val;
+      handleReveal(key, ch.dataset.val); updatePrice();
+    });
+  });
+});
+function handleReveal(key, val){
+  const map = { target:{customer:'rv-customer'}, copy:{ai:'rv-copy-ai', customer:'rv-copy-customer'},
+    image:{customer:'rv-image-customer'}, promo:{yes:'rv-promo-yes'} };
+  Object.values(map[key]||{}).forEach(id=>document.getElementById(id)?.classList.remove('show'));
+  const t=(map[key]||{})[val]; if(t) document.getElementById(t).classList.add('show');
+}
+document.getElementById('photo_files').addEventListener('change', e=>{
+  const n=e.target.files.length;
+  document.getElementById('photo_count').textContent = n ? `사진 ${n}장 선택됨` : '';
+});
+let currentPoints = 0;
+function updatePrice(){
+  const done = order.target && order.copy && order.image && order.promo;
+  const btn=document.getElementById('submitBtn'), pe=document.getElementById('price');
+  if(!done){ pe.textContent='선택해 주세요'; btn.disabled=true; return; }
+  let p=10; if(order.copy==='ai') p+=15; if(order.image==='ai') p+=5;
+  currentPoints=p; pe.textContent=p+'P'; btn.disabled=false;
+}
+document.getElementById('submitBtn').addEventListener('click', async ()=>{
+  const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='처리 중...';
+  const { data, error } = await sb.rpc('place_order', {
+    p_target: order.target,
+    p_naver_id: document.getElementById('naver_id').value || null,
+    p_copy_mode: order.copy,
+    p_copy_topic: document.getElementById('copy_topic').value || null,
+    p_copy_must: document.getElementById('copy_must').value || null,
+    p_copy_text: document.getElementById('copy_text').value || null,
+    p_image_mode: order.image,
+    p_promo: order.promo==='yes',
+    p_shop: order.promo==='yes' ? {
+      name: document.getElementById('shop_name').value,
+      addr: document.getElementById('shop_addr').value,
+      tel: document.getElementById('shop_tel').value,
+      hours: document.getElementById('shop_hours').value,
+    } : null,
+    p_points: currentPoints,
+  });
+  if(error){ alert('주문 실패: '+error.message); btn.disabled=false; btn.textContent='주문하기'; return; }
+  alert('주문 완료! 접수되었습니다.\n주문번호: '+data);
+  const { data:{ user } } = await sb.auth.getUser();
+  showApp(user);   // 포인트 갱신
+  btn.textContent='주문하기';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# 비밀 정보 — 절대 커밋 금지
+_secrets.txt
+.env
+*.key
+
+# 로컬 개발/핸드오프 문서 (시크릿 포함) — public repo에 올리지 않음
+_다음세션.md
+_*.md
+
+# 백엔드 (GitHub Pages엔 불필요, 로컬 보관)
+*.sql
+*.ts
