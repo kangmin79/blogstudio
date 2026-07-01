@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>BlogStudio 관리자</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{ --green:#1c4a3b; --gold:#a8763a; --cream:#f7f4ec; --line:#e3ddd0; --ink:#2a2a26; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--cream); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif; }
+  .serif{ font-family:"Nanum Myeongjo",Georgia,serif; }
+  header{ background:var(--green); color:#fff; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; }
+  header .brand{ font-size:20px; font-weight:700; }
+  header .brand span{ color:#e8c98a; }
+  header .who{ font-size:13px; opacity:.85; }
+  header .logout{ margin-left:12px; cursor:pointer; text-decoration:underline; font-size:13px; }
+  .wrap{ max-width:820px; margin:0 auto; padding:22px 16px 60px; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:20px; }
+  h2{ margin:0 0 14px; font-size:17px; color:var(--green); }
+  .count{ color:var(--gold); font-weight:700; }
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  th,td{ text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); }
+  th{ color:#7a7568; font-weight:600; font-size:12px; }
+  .empty{ color:#999; padding:14px 4px; font-size:14px; }
+  button{ border:none; border-radius:8px; padding:7px 12px; font-size:13px; font-weight:600; cursor:pointer; }
+  .ok{ background:var(--green); color:#fff; }
+  .no{ background:#eee; color:#555; }
+  .danger{ background:#c0392b; color:#fff; }
+  .warn{ background:#e67e22; color:#fff; }
+  .badge{ display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
+  .bd-sus{ background:#fbe3e0; color:#c0392b; }
+  .bd-adm{ background:#e6efe9; color:var(--green); }
+  .gate{ max-width:420px; margin:80px auto; text-align:center; padding:24px; }
+  .gate a,.gate button.link{ display:inline-block; margin-top:14px; background:var(--green); color:#fff; padding:10px 18px; border-radius:8px; text-decoration:none; }
+  .muted{ color:#8a8578; font-size:13px; }
+  .amt{ font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate" style="display:none;"></div>
+
+<div id="panel" style="display:none;">
+  <header>
+    <div class="brand serif">Blog<span>Studio</span> 관리자</div>
+    <div><span class="who" id="who"></span><span class="logout" onclick="logout()">로그아웃</span></div>
+  </header>
+  <div class="wrap">
+
+    <div class="card">
+      <h2>💰 입금 대기 <span class="count" id="crCount">0</span>건</h2>
+      <div id="crBox"></div>
+    </div>
+
+    <div class="card">
+      <h2>👤 회원 <span class="count" id="uCount">0</span>명</h2>
+      <div id="uBox"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SB_URL  = 'https://enqsuymbsugrkmstewek.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucXN1eW1ic3Vncmttc3Rld2VrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDg1MzQsImV4cCI6MjA5ODQyNDUzNH0.LsVx4Eob26nBQ_sD_VjFoSXPgIQcTTaNSql48gdvgLM';
+const sb = supabase.createClient(SB_URL, SB_ANON);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const won = n => (n==null?'-':Number(n).toLocaleString()+'원');
+
+function showGate(html){
+  document.getElementById('panel').style.display='none';
+  const g=document.getElementById('gate'); g.style.display='block'; g.innerHTML=html;
+}
+
+async function boot(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){
+    showGate('<div class="serif" style="font-size:20px;color:#1c4a3b;">관리자 로그인</div>'
+      +'<p class="muted">주문 페이지에서 로그인한 뒤 다시 들어오세요.</p>'
+      +'<a href="order.html">로그인하러 가기</a>');
+    return;
+  }
+  // 관리자 여부 확인 (RLS: 본인 프로필 조회)
+  const { data:me } = await sb.from('profiles').select('nickname,is_admin').eq('id', session.user.id).single();
+  if(!me || !me.is_admin){
+    showGate('<div class="serif" style="font-size:20px;color:#c0392b;">접근 권한 없음</div>'
+      +'<p class="muted">이 화면은 관리자 전용입니다.</p>'
+      +'<button class="link" onclick="logout()">로그아웃</button>');
+    return;
+  }
+  document.getElementById('gate').style.display='none';
+  document.getElementById('panel').style.display='block';
+  document.getElementById('who').textContent = (me.nickname||'관리자')+'님 · ';
+  loadCharges(); loadUsers();
+}
+
+async function loadCharges(){
+  const { data, error } = await sb.from('charge_requests')
+    .select('id,points,amount_krw,depositor,created_at, profiles(nickname)')
+    .eq('status','pending').order('created_at',{ascending:true});
+  const box=document.getElementById('crBox');
+  if(error){ box.innerHTML='<div class="empty">불러오기 오류: '+esc(error.message)+'</div>'; return; }
+  document.getElementById('crCount').textContent = data.length;
+  if(!data.length){ box.innerHTML='<div class="empty">대기 중인 입금 신청이 없습니다.</div>'; return; }
+  let h='<table><tr><th>신청자</th><th>입금자명</th><th>금액</th><th>포인트</th><th>신청시각</th><th></th></tr>';
+  for(const r of data){
+    h+='<tr>'
+      +'<td>'+esc(r.profiles?.nickname||'-')+'</td>'
+      +'<td>'+esc(r.depositor||'-')+'</td>'
+      +'<td class="amt">'+won(r.amount_krw)+'</td>'
+      +'<td class="amt">'+esc(r.points)+'P</td>'
+      +'<td class="muted">'+new Date(r.created_at).toLocaleString('ko-KR')+'</td>'
+      +'<td style="white-space:nowrap;">'
+      +'<button class="ok" onclick="approve(\''+r.id+'\')">승인</button> '
+      +'<button class="no" onclick="reject(\''+r.id+'\')">거절</button></td>'
+      +'</tr>';
+  }
+  box.innerHTML=h+'</table>';
+}
+
+async function loadUsers(){
+  const { data, error } = await sb.from('profiles')
+    .select('id,nickname,point_balance,is_suspended,is_admin').order('created_at',{ascending:true});
+  const box=document.getElementById('uBox');
+  if(error){ box.innerHTML='<div class="empty">불러오기 오류: '+esc(error.message)+'</div>'; return; }
+  document.getElementById('uCount').textContent = data.length;
+  let h='<table><tr><th>닉네임</th><th>보유P</th><th>상태</th><th></th></tr>';
+  for(const u of data){
+    const badges = (u.is_admin?'<span class="badge bd-adm">관리자</span> ':'')
+                 + (u.is_suspended?'<span class="badge bd-sus">정지됨</span>':'');
+    const btn = u.is_admin ? '<span class="muted">-</span>'
+      : (u.is_suspended
+          ? '<button class="ok" onclick="suspend(\''+u.id+'\',false)">정지 해제</button>'
+          : '<button class="danger" onclick="suspend(\''+u.id+'\',true)">계정 정지</button>');
+    h+='<tr><td>'+esc(u.nickname||'-')+'</td><td class="amt">'+esc(u.point_balance)+'P</td>'
+      +'<td>'+(badges||'<span class="muted">정상</span>')+'</td><td>'+btn+'</td></tr>';
+  }
+  box.innerHTML=h+'</table>';
+}
+
+async function approve(id){
+  if(!confirm('입금 확인 → 포인트를 지급합니다. 승인할까요?')) return;
+  const { error } = await sb.rpc('approve_charge',{ p_request_id:id });
+  if(error){ alert('승인 실패: '+error.message); return; }
+  await loadCharges(); await loadUsers();
+}
+async function reject(id){
+  const memo = prompt('거절 사유(선택):','');
+  if(memo===null) return;
+  const { error } = await sb.rpc('reject_charge',{ p_request_id:id, p_memo:memo||null });
+  if(error){ alert('거절 실패: '+error.message); return; }
+  await loadCharges();
+}
+async function suspend(id, on){
+  if(!confirm(on?'이 계정을 정지할까요? (주문 불가)':'정지를 해제할까요?')) return;
+  const { error } = await sb.rpc('set_suspended',{ p_user_id:id, p_suspend:on });
+  if(error){ alert((on?'정지':'해제')+' 실패: '+error.message); return; }
+  await loadUsers();
+}
+async function logout(){ await sb.auth.signOut(); location.href='order.html'; }
+
+boot();
+</script>
+</body>
+</html>
