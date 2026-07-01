@@ -20,7 +20,7 @@
   body{font-family:var(--sans); background:var(--bg); color:var(--text);
     -webkit-font-smoothing:antialiased; letter-spacing:-.02em; line-height:1.6;}
   .num{font-variant-numeric:tabular-nums;}
-  .wrap{max-width:860px; margin:0 auto; padding:26px 18px 80px;}
+  .wrap{max-width:1160px; margin:0 auto; padding:26px 20px 80px;}
 
   .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;}
   .brand{font-size:15px; font-weight:800; letter-spacing:-.3px;} .brand span{color:var(--green);}
@@ -59,6 +59,21 @@
   .panel h3{font-size:14.5px; font-weight:800; letter-spacing:-.02em; margin-bottom:2px;}
   .panel .psub{font-size:11.5px; color:var(--light); margin-bottom:14px;}
   .chartwrap{height:280px; position:relative;}
+
+  /* 대시보드 그리드 */
+  .dash{display:grid; gap:16px; margin-bottom:16px; align-items:start;}
+  .dash .panel{margin-bottom:0; height:100%;}
+  .dash.a{grid-template-columns:1.6fr 1fr;}
+  .dash.b{grid-template-columns:1fr 1.6fr;}
+  .dash.k{grid-template-columns:repeat(2,1fr);}
+  @media(max-width:900px){ .dash.a,.dash.b,.dash.k{grid-template-columns:1fr;} }
+  .stat-row{display:flex; align-items:center; justify-content:space-between; padding:15px 2px; border-bottom:1px solid var(--line);}
+  .stat-row:last-child{border-bottom:0;}
+  .stat-row .sl{font-size:12.5px; color:var(--sub); font-weight:600;}
+  .stat-row .sv{text-align:right;}
+  .stat-row .sv b{font-size:23px; font-weight:800; letter-spacing:-.03em;}
+  .stat-row .sv .m{font-size:11px; font-weight:700; margin-top:2px;}
+  .m.up{color:var(--good);} .m.down{color:var(--bad);} .m.flat{color:var(--light);}
 
   /* 키워드 경쟁 카드 */
   .kw-top{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:12px;}
@@ -242,6 +257,38 @@ function profilePanel(profiles){
       ${rows}</table></div></div>`;
 }
 
+// 스마트플레이스 통계 패널 (세로 스택)
+function statPanel(lastM,prevM){
+  if(!lastM) return '';
+  const st=lastM.stats||{}, pst=(prevM&&prevM.stats)||{};
+  const row=(l,c,pv)=>`<div class="stat-row"><div class="sl">${esc(l)}</div><div class="sv"><b class="num">${fmtN(c)}</b>${momTxt(c,pv,'m')}</div></div>`;
+  return `<div class="panel"><h3>스마트플레이스 통계</h3><div class="psub">${esc(lastM.ym)} · 전월 대비</div>`
+    + row('플레이스 조회수',st.views,pst.views)
+    + row('방문 유입',st.visits,pst.visits)
+    + row('예약·전화·길찾기',st.reserve_clicks,pst.reserve_clicks)
+    + `</div>`;
+}
+// 키워드 경쟁 카드 (순위 + 상위 업체 막대)
+function keywordCard(kw, s){
+  const nowR=latestRank(s), fl=firstLast(s);
+  let dl=''; if(fl){ const diff=fl.first-fl.last;
+    dl = diff>0?`<div class="dl up num">${fl.first}위 → ${diff}계단 상승</div>`
+       : diff<0?`<div class="dl down num">${fl.first}위 → ${-diff}계단 하락</div>`
+       : `<div class="dl flat">순위 유지</div>`; }
+  const cur = nowR!=null?`<div class="big num">${nowR}<span class="u">위</span></div>`:`<div class="big out">순위권 밖</div>`;
+  return `<div class="panel"><div class="kw-top">
+      <div><div class="kw-name">${esc(kw)}</div><div class="kw-sub">네이버 통합검색</div></div>
+      <div class="kw-cur">${cur}${dl}</div>
+    </div>${topsBars(s)||'<div class="kw-empty">상위 업체 데이터가 아직 없습니다.</div>'}</div>`;
+}
+// 2개 패널을 나란히 (빈 건 제외, 1개면 단독)
+function dashRow(cls, a, b){
+  const ps=[a,b].filter(x=>x&&x.trim());
+  if(!ps.length) return '';
+  if(ps.length===1) return ps[0];
+  return `<div class="dash ${cls}">${ps.join('')}</div>`;
+}
+
 let chartRef=null;
 function render(d){
   const p=d.place||{}, ranks=d.ranks||[], months=d.months||[];
@@ -272,55 +319,30 @@ function render(d){
   h+=`<div class="honest"><b>정직하게 알려드립니다.</b> 네이버 순위는 알고리즘과 경쟁 상황에 따라 늘 변동합니다.
       특정 순위를 보장하지 않으며, 실제 측정한 순위 추이와 유입 성장을 있는 그대로 보여드립니다.</div>`;
 
-  // 순위 추이 (Chart.js)
-  if(kws.length){
-    h+=`<div class="sec"><h2>키워드 순위 추이</h2><div class="ln"></div><div class="agg">낮을수록 상위</div></div>`;
-    h+=`<div class="panel"><div class="chartwrap"><canvas id="trend"></canvas></div></div>`;
-  }
+  // ── 대시보드 그리드 (패널 좌우 배치) ──
+  // Row A: 순위 추이 차트 | 스마트플레이스 통계
+  const chartPanel = kws.length
+    ? `<div class="panel"><h3>키워드 순위 추이</h3><div class="psub">낮을수록 상위 · ${esc(period)}</div><div class="chartwrap"><canvas id="trend"></canvas></div></div>`
+    : `<div class="panel"><h3>키워드 순위 추이</h3><div class="kw-empty">아직 측정된 순위 데이터가 없습니다.</div></div>`;
+  h+=dashRow('a', chartPanel, statPanel(lastM,prevM));
 
-  // 키워드별 경쟁 현황
-  h+=`<div class="sec"><h2>키워드별 경쟁 현황</h2><div class="ln"></div></div>`;
-  if(!kws.length){ h+=`<div class="panel"><div class="kw-empty">아직 측정된 순위 데이터가 없습니다.</div></div>`; }
-  else kws.forEach(kw=>{
-    const s=groups[kw], nowR=latestRank(s), fl=firstLast(s);
-    let dl=''; if(fl){ const diff=fl.first-fl.last;
-      dl = diff>0?`<div class="dl up num">${fl.first}위 → ${diff}계단 상승</div>`
-         : diff<0?`<div class="dl down num">${fl.first}위 → ${-diff}계단 하락</div>`
-         : `<div class="dl flat">순위 유지</div>`; }
-    const cur = nowR!=null?`<div class="big num">${nowR}<span class="u">위</span></div>`:`<div class="big out">순위권 밖</div>`;
-    h+=`<div class="panel">
-      <div class="kw-top">
-        <div><div class="kw-name">${esc(kw)}</div><div class="kw-sub">네이버 통합검색</div></div>
-        <div class="kw-cur">${cur}${dl}</div>
-      </div>${topsBars(s)||'<div class="kw-empty">상위 업체 데이터가 아직 없습니다.</div>'}
-    </div>`;
-  });
-
-  // 플레이스 프로파일 (세팅 완성도 + 경쟁사 비교)
+  // Row B: 세팅 완성도 | 경쟁사 프로파일 비교
   const profiles=d.profiles||[];
   const oursP=profiles.find(x=>x.is_ours);
-  if(profiles.length){
-    h+=`<div class="sec"><h2>플레이스 프로파일</h2><div class="ln"></div></div>`;
-    h+=setupPanel(oursP);
-    h+=profilePanel(profiles);
+  h+=dashRow('b', setupPanel(oursP), profilePanel(profiles));
+
+  // 키워드별 경쟁 현황 (2단 카드)
+  if(kws.length){
+    h+=`<div class="sec"><h2>키워드별 경쟁 현황</h2><div class="ln"></div></div>`;
+    h+=`<div class="dash k">`+kws.map(kw=>keywordCard(kw, groups[kw])).join('')+`</div>`;
   }
 
-  // 통계 KPI
-  if(months.length){
-    const st=lastM.stats||{}, pst=(prevM&&prevM.stats)||{};
-    h+=`<div class="sec"><h2>스마트플레이스 통계</h2><div class="ln"></div><div class="agg">${esc(lastM.ym)}</div></div>`;
-    h+=`<div class="kpis">
-      <div class="kpi"><div class="l">플레이스 조회수</div><div class="v num">${fmtN(st.views)}</div>${momTxt(st.views,pst.views,'d')}</div>
-      <div class="kpi"><div class="l">방문 유입</div><div class="v num">${fmtN(st.visits)}</div>${momTxt(st.visits,pst.visits,'d')}</div>
-      <div class="kpi"><div class="l">예약·전화·길찾기</div><div class="v num">${fmtN(st.reserve_clicks)}</div>${momTxt(st.reserve_clicks,pst.reserve_clicks,'d')}</div>
-    </div>`;
-  }
-
-  // 한 일
+  // 이번 기간에 한 일 (2단)
   const withWork=months.filter(m=>m.work_done&&m.work_done.trim());
   if(withWork.length){
     h+=`<div class="sec"><h2>이번 기간에 한 일</h2><div class="ln"></div></div>`;
-    withWork.slice().reverse().forEach(m=>{ h+=`<div class="panel"><div class="mtag num">${esc(m.ym)}</div><div class="work">${esc(m.work_done)}</div></div>`; });
+    const cards=withWork.slice().reverse().map(m=>`<div class="panel"><div class="mtag num">${esc(m.ym)}</div><div class="work">${esc(m.work_done)}</div></div>`);
+    h+= cards.length>1 ? `<div class="dash k">`+cards.join('')+`</div>` : cards[0];
   }
 
   h+=`<div class="foot"><div class="fm">Blog<span>Studio</span></div>정직하게, 숫자로 증명하는 플레이스 관리<br>본 리포트는 실제 측정 데이터로 작성되었습니다.</div>`;
