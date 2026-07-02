@@ -254,11 +254,12 @@ function setupPanel(ours){
   const items=[
     {on: ours.has_booking, l:'예약 버튼'},
     {on: ours.has_talk, l:'톡톡 상담'},
-    {on: ours.has_coupon, l:'쿠폰 발급'},
     {on: ours.news_days!=null && ours.news_days<=30, l:'최근 소식(30일 내)'},
     {on: (ours.photos||0)>=10, l:'대표 사진 10장 이상'},
     {on: (ours.reply_rate||0)>=50, l:'리뷰 답변 활발'},
+    {on: !!(ours.rep_keywords&&ours.rep_keywords.length), l:'대표키워드 세팅'},
   ];
+  if(ours.has_coupon) items.push({on:true, l:'쿠폰 발급'});   // 쿠폰=자동측정 안 함 → 확인된 경우만 표시
   const done=items.filter(i=>i.on).length, pct=Math.round(done/items.length*100);
   const grid=items.map(i=>`<div class="chk ${i.on?'on':'off'}"><span class="mk">${i.on?'✓':'!'}</span>${esc(i.l)}</div>`).join('');
   const kw=(ours.review_keywords&&ours.review_keywords.length)
@@ -281,7 +282,7 @@ function profilePanel(profiles){
       <td>${p.reply_rate==null?'-':p.reply_rate+'%'}</td>
       <td>${p.reviews_per_week==null?'-':'주 '+p.reviews_per_week+'건'}</td>
       <td>${nd}</td>
-      <td>${bt(p.has_booking,'예약')}${bt(p.has_talk,'톡톡')}${bt(p.has_coupon,'쿠폰')}</td>
+      <td>${bt(p.has_booking,'예약')}${bt(p.has_talk,'톡톡')}${p.has_coupon?bt(true,'쿠폰'):''}</td>
     </tr>`;
   }).join('');
   return `<div class="panel"><h3>경쟁사 프로파일 비교</h3><div class="psub">상위 노출 업체와 리뷰·세팅을 나란히 · 방문자리뷰=영수증 인증 · 답변율·리뷰 유입=최근 리뷰 표본 기준</div>
@@ -333,7 +334,6 @@ function diagnosisPanel(profiles){
   // 세팅 부족 → 처방 추가
   if(!ours.has_booking) rx.push('예약 버튼이 없어요. 예약 연동을 켜면 전환·순위에 유리해요');
   if(!ours.has_talk)    rx.push('톡톡이 연결 안 됐어요. 문의 응대 채널을 켜세요');
-  if(!ours.has_coupon)  rx.push('쿠폰이 없어요. 쿠폰을 걸면 방문 유도에 도움돼요');
   if((ours.photos||0)<10) rx.push('대표 사진이 부족해요(10장 미만). 사진을 보강하세요');
   if(!ours.rep_keywords||!ours.rep_keywords.length) rx.push('플레이스 대표키워드가 비어 있어요. 손님이 실제 검색하는 단어 5개로 채우세요');
 
