@@ -379,6 +379,9 @@ async function logout(){ await sb.auth.signOut(); location.reload(); }
 // ===== 화면 전환 =====
 function showLogin(){ document.getElementById('loginGate').style.display='flex'; document.getElementById('app').style.display='none'; }
 async function showApp(user){
+  // 스튜디오에서 온 로그인이면 로그인 완료 후 되돌려보냄 (카카오 redirect URI가 order.html뿐이라 릴레이)
+  const back = sessionStorage.getItem('bs_back');
+  if(back === 'studio.html'){ sessionStorage.removeItem('bs_back'); location.replace('studio.html'); return; }
   document.getElementById('loginGate').style.display='none';
   document.getElementById('app').style.display='block';
   const { data } = await sb.from('profiles').select('nickname, point_balance').eq('id', user.id).single();
