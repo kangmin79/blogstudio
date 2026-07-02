@@ -192,6 +192,12 @@
     <p>아래만 고르시면 됩니다. 나머지는 저희가 합니다.</p>
   </div>
 
+  <div id="diagBadge" style="display:none; margin:0 0 18px; background:#e8f6f0; border:1px solid #bfe3d5;
+    border-radius:12px; padding:13px 16px; font-size:13.5px; color:#0e6a4c; line-height:1.6;">
+    📊 <b>진단 리포트와 연결된 주문입니다.</b> 원고가 사장님 가게의 실측 데이터(검색 키워드·경쟁 현황·손님 리뷰 특성) 기반으로 작성됩니다.
+    <span id="diagOff" style="float:right; cursor:pointer; color:#6b7280; font-size:12px; text-decoration:underline;">연결 해제</span>
+  </div>
+
   <div class="section">
     <div class="step-head"><span class="num serif">01</span><h2 class="serif">어디에 발행할까요?</h2></div>
     <div class="step-desc">가장 중요한 선택입니다.</div>
@@ -429,12 +435,25 @@ async function submitCharge(){
 }
 async function boot(){
   const params = new URLSearchParams(location.search);
+  // 진단 리포트에서 온 경우: 토큰 보관 (카카오 로그인 리다이렉트에도 살아남게 sessionStorage)
+  const t = params.get('t');
+  if(t && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t)){
+    sessionStorage.setItem('bs_place_token', t);
+  }
+  showDiagBadge();
   const code = params.get('code');
   if(code){ history.replaceState({}, '', REDIRECT); return handleKakao(code); }
   const { data:{ session } } = await sb.auth.getSession();
   if(session) showApp(session.user); else showLogin();
 }
 sb.auth.onAuthStateChange((_e, session)=>{ if(session) showApp(session.user); });
+function showDiagBadge(){
+  const el = document.getElementById('diagBadge');
+  if(!el) return;
+  el.style.display = sessionStorage.getItem('bs_place_token') ? 'block' : 'none';
+  const off = document.getElementById('diagOff');
+  if(off) off.onclick = ()=>{ sessionStorage.removeItem('bs_place_token'); showDiagBadge(); };
+}
 boot();
 
 // ===== 실시간 처리 현황 (워커 heartbeat 기반) =====
@@ -540,6 +559,7 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
       hours: document.getElementById('shop_hours').value,
     } : null,
     p_points: currentPoints,
+    p_place_token: sessionStorage.getItem('bs_place_token') || null,
   });
   if(error){ alert('주문 실패: '+error.message); btn.disabled=false; btn.textContent='주문하기'; return; }
   alert('주문 완료! 접수되었습니다.\n주문번호: '+data);
