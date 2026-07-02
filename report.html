@@ -161,6 +161,13 @@
   .ctrack i{display:block; height:100%; border-radius:0 4px 4px 0; transition:width .5s ease;}
   .ctrack i.ours{background:#12805c;} .ctrack i.comp{background:#8a978f;}
   .cbv{flex:none; min-width:66px; font-size:12.3px; font-weight:800; color:var(--text);}
+  .cta-wrap{margin-top:18px; padding:17px 19px; background:linear-gradient(135deg,#123d2e,#12805c);
+    border-radius:14px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+  .cta-txt{color:#dcebe3; font-size:12.6px; line-height:1.65; flex:1; min-width:240px;}
+  .cta-txt b{display:block; color:#fff; font-size:14.5px; margin-bottom:3px; letter-spacing:-.01em;}
+  .cta-btn{flex:none; background:#fff; color:#12805c; font-weight:800; font-size:13.5px; padding:12px 24px;
+    border-radius:11px; text-decoration:none; box-shadow:0 6px 16px rgba(0,0,0,.18); transition:transform .15s, box-shadow .15s;}
+  .cta-btn:hover{transform:translateY(-2px); box-shadow:0 10px 22px rgba(0,0,0,.28);}
   .rkw-row{padding:11px 0; border-bottom:1px solid var(--line);}
   .rkw-row:last-child{border-bottom:none;}
   .rkw-row.ours{background:var(--tint); margin:0 -10px; padding:11px 10px; border-radius:12px; border-bottom:none;}
@@ -382,6 +389,11 @@ function diagnosisPanel(profiles){
     <div class="cmp-legend"><span><span class="ck ours"></span>우리</span><span><span class="ck comp"></span>경쟁 상위 평균</span></div>
     <div class="cmp-list">${rows.map(r=>r.html).join('')}</div>
     <div class="rx-wrap"><div class="dg-h">이번 달 처방 (할 일)</div>${rxH}</div>
+    <div class="cta-wrap">
+      <div class="cta-txt"><b>이 처방, BlogStudio가 대신 해드립니다</b>
+        상권 데이터 기반 블로그 원고 작성·발행부터 플레이스 관리까지 — 다음 달 리포트에서 변화를 숫자로 확인하세요.</div>
+      <a class="cta-btn" href="https://blogstudio.kr/order.html?ref=report" target="_blank" rel="noopener">원고 주문하기 →</a>
+    </div>
   </div>`;
 }
 
