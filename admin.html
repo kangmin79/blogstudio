@@ -81,6 +81,11 @@
     </div>
 
     <div class="card">
+      <h2>🩺 무료진단 신청 <span class="count" id="dgCount">0</span>건</h2>
+      <div id="dgBox"></div>
+    </div>
+
+    <div class="card">
       <h2>📊 순위 리포트 <span class="count" id="plCount">0</span>곳
         <button class="ok" style="margin-left:auto;" onclick="openPlaceForm()">+ 새 가게</button></h2>
       <div id="plBox"></div>
@@ -125,7 +130,52 @@ async function boot(){
   document.getElementById('gate').style.display='none';
   document.getElementById('panel').style.display='block';
   document.getElementById('who').textContent = (me.nickname||'관리자')+'님 · ';
-  loadCharges(); loadUsers(); loadPlaces();
+  loadCharges(); loadUsers(); loadDiags(); loadPlaces();
+}
+
+/* ============== 무료진단 신청 ============== */
+let DIAGS=[];
+async function loadDiags(){
+  const { data, error } = await sb.from('diag_requests')
+    .select('*').eq('status','pending').order('created_at',{ascending:true});
+  const box=document.getElementById('dgBox');
+  if(error){ box.innerHTML='<div class="empty">불러오기 오류: '+esc(error.message)+'</div>'; return; }
+  DIAGS = data||[];
+  document.getElementById('dgCount').textContent = DIAGS.length;
+  if(!DIAGS.length){ box.innerHTML='<div class="empty">대기 중인 진단 신청이 없습니다.</div>'; return; }
+  let h='<table><tr><th>가게</th><th>지역·업종</th><th>연락처</th><th>신청시각</th><th></th></tr>';
+  for(const d of DIAGS){
+    h+='<tr><td><b>'+esc(d.shop_name)+'</b></td>'
+      +'<td class="muted">'+esc([d.region,d.biztype].filter(Boolean).join(' · ')||'-')+'</td>'
+      +'<td>'+esc(d.contact)+'</td>'
+      +'<td class="muted">'+new Date(d.created_at).toLocaleString('ko-KR')+'</td>'
+      +'<td style="white-space:nowrap;">'
+      +'<button class="ok" onclick="regFromDiag(\''+d.id+'\')">가게로 등록</button> '
+      +'<button class="no" onclick="doneDiag(\''+d.id+'\')">완료</button> '
+      +'<button class="danger" onclick="delDiag(\''+d.id+'\')">삭제</button></td></tr>';
+  }
+  box.innerHTML=h+'</table>';
+}
+function regFromDiag(id){
+  const d=DIAGS.find(x=>x.id===id); if(!d) return;
+  openPlaceForm();
+  document.getElementById('pf_name').value = d.shop_name;
+  document.getElementById('pf_region').value = d.region||'';
+  document.getElementById('pf_biztype').value = d.biztype||'';
+  if(d.region && d.biztype) document.getElementById('pf_kw').value = d.region+d.biztype;
+  document.getElementById('pf_memo').value = '진단신청 · 연락처 '+d.contact;
+}
+async function doneDiag(id){
+  if(!confirm('리포트를 보냈나요? 완료 처리하면 목록에서 사라집니다.')) return;
+  const { error } = await sb.from('diag_requests').update({status:'done'}).eq('id',id);
+  if(error){ alert('처리 실패: '+error.message); return; }
+  await loadDiags();
+}
+async function delDiag(id){
+  if(!confirm('이 신청을 삭제할까요? 되돌릴 수 없습니다.')) return;
+  const { error } = await sb.from('diag_requests').delete().eq('id',id);
+  if(error){ alert('삭제 실패: '+error.message); return; }
+  await loadDiags();
 }
 
 async function loadCharges(){

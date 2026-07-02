@@ -84,6 +84,25 @@
     background:#fff; padding:14px 32px; border-radius:11px; transition:.15s;}
   .use .btn-white:hover{transform:translateY(-1px); box-shadow:0 8px 24px rgba(0,0,0,.18);}
 
+  /* 무료 진단 */
+  .diag-card{max-width:560px; margin:0 auto; background:var(--card); border:1px solid var(--line);
+    border-radius:18px; padding:30px 28px; box-shadow:0 6px 24px rgba(17,24,39,.06);}
+  .diag-card .fl{display:block; font-size:13px; font-weight:700; margin:14px 0 6px; color:var(--ink);}
+  .diag-card .fi{width:100%; border:1px solid var(--line); border-radius:10px; padding:12px 13px;
+    font-size:15px; font-family:inherit; outline:none; transition:.15s;}
+  .diag-card .fi:focus{border-color:var(--green); box-shadow:0 0 0 3px var(--tint);}
+  .diag-row{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .diag-btn{width:100%; margin-top:22px; border:none; cursor:pointer; font-size:16px; font-weight:800;
+    color:#fff; background:var(--green); padding:15px 0; border-radius:11px; transition:.15s;
+    font-family:inherit; box-shadow:0 6px 20px rgba(18,128,92,.22);}
+  .diag-btn:hover{background:var(--green2); transform:translateY(-1px);}
+  .diag-btn:disabled{opacity:.6; cursor:default; transform:none;}
+  .diag-note{margin-top:14px; font-size:12.5px; color:var(--soft); text-align:center; line-height:1.7;}
+  .diag-done{text-align:center; padding:26px 0 12px;}
+  .diag-done .big{font-size:21px; font-weight:800; color:var(--green);}
+  .diag-done p{margin-top:10px; font-size:14.5px; color:var(--soft); line-height:1.75;}
+  .diag-err{margin-top:12px; font-size:13.5px; color:#dc2626; text-align:center; display:none;}
+
   footer{border-top:1px solid var(--line); padding:32px 0 56px; margin-top:20px;
     font-size:13px; color:var(--soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
 
@@ -113,6 +132,7 @@
        사장님은 장사에만 집중하세요.</p>
     <div class="cta-row">
       <a class="btn-primary" href="order.html">무료로 시작하기</a>
+      <a class="btn-ghost" href="#diag">내 가게 무료 진단</a>
       <a class="btn-ghost" href="#how">어떻게 되나요?</a>
     </div>
     <div class="hero-note">가입 시 <b>무료 30P</b> 지급 · 첫 글은 무료</div>
@@ -173,6 +193,42 @@
     </div>
   </section>
 
+  <!-- 무료 진단 -->
+  <section id="diag">
+    <div class="sec-head">
+      <div class="sec-kicker">무료 진단</div>
+      <h2>내 가게, 네이버에서 몇 위일까요?</h2>
+      <p>가게 이름과 연락처만 남기면, 네이버에 공개된 데이터로<br>
+         순위·리뷰·경쟁 현황을 진단한 리포트를 무료로 보내드립니다.</p>
+    </div>
+    <div class="diag-card">
+      <form id="diagForm" onsubmit="return sendDiag(event)">
+        <label class="fl">가게 이름 *</label>
+        <input class="fi" id="dg_shop" maxlength="60" placeholder="예: 미소플러스치과" required>
+        <div class="diag-row">
+          <div>
+            <label class="fl">지역 (동네)</label>
+            <input class="fi" id="dg_region" maxlength="40" placeholder="예: 송도">
+          </div>
+          <div>
+            <label class="fl">업종</label>
+            <input class="fi" id="dg_biztype" maxlength="40" placeholder="예: 치과">
+          </div>
+        </div>
+        <label class="fl">연락처 (전화 또는 카카오톡 ID) *</label>
+        <input class="fi" id="dg_contact" maxlength="60" placeholder="예: 010-1234-5678" required>
+        <button class="diag-btn" id="dg_btn" type="submit">무료 진단 신청하기</button>
+        <div class="diag-err" id="dg_err"></div>
+      </form>
+      <div class="diag-done" id="diagDone" style="display:none;">
+        <div class="big">신청이 접수되었습니다 ✓</div>
+        <p>네이버에 공개된 데이터로 진단을 준비해서<br>
+           남겨주신 연락처로 <b>리포트 링크</b>를 보내드릴게요.</p>
+      </div>
+      <div class="diag-note">설치·가입 없이 신청만 하면 됩니다 · 공개된 데이터만 사용합니다</div>
+    </div>
+  </section>
+
   <!-- 이용 방법 -->
   <section>
     <div class="use">
@@ -189,6 +245,47 @@
     <span>문의 — 카카오톡 채널</span>
   </footer>
 </div>
+
+<script>
+const SB_URL  = 'https://enqsuymbsugrkmstewek.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucXN1eW1ic3Vncmttc3Rld2VrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDg1MzQsImV4cCI6MjA5ODQyNDUzNH0.LsVx4Eob26nBQ_sD_VjFoSXPgIQcTTaNSql48gdvgLM';
+
+async function sendDiag(e){
+  e.preventDefault();
+  const btn = document.getElementById('dg_btn');
+  const err = document.getElementById('dg_err');
+  err.style.display='none';
+  const shop = document.getElementById('dg_shop').value.trim();
+  const contact = document.getElementById('dg_contact').value.trim();
+  if(!shop){ err.textContent='가게 이름을 입력해주세요.'; err.style.display='block'; return false; }
+  if(contact.length < 4){ err.textContent='연락처를 입력해주세요.'; err.style.display='block'; return false; }
+  btn.disabled = true; btn.textContent = '신청 중…';
+  try{
+    const res = await fetch(SB_URL+'/rest/v1/rpc/request_diagnosis', {
+      method:'POST',
+      headers:{ 'apikey':SB_ANON, 'Authorization':'Bearer '+SB_ANON, 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        p_shop: shop,
+        p_region: document.getElementById('dg_region').value.trim() || null,
+        p_biztype: document.getElementById('dg_biztype').value.trim() || null,
+        p_contact: contact,
+        p_memo: null
+      })
+    });
+    if(!res.ok){
+      const j = await res.json().catch(()=>({}));
+      throw new Error(j.message || '신청에 실패했어요. 잠시 후 다시 시도해주세요.');
+    }
+    document.getElementById('diagForm').style.display='none';
+    document.getElementById('diagDone').style.display='block';
+  }catch(ex){
+    err.textContent = ex.message;
+    err.style.display='block';
+    btn.disabled = false; btn.textContent = '무료 진단 신청하기';
+  }
+  return false;
+}
+</script>
 
 </body>
 </html>
