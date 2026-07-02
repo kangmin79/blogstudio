@@ -139,6 +139,13 @@
   .ptbl tr.ours td:first-child{color:var(--green); font-weight:800;}
   .bchip{display:inline-block; font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px; margin-left:3px;}
   .bchip.on{color:var(--green); background:var(--tint);} .bchip.off{color:#c3c8c4; background:#f3f5f4;}
+  .star{font-size:11px; color:var(--gold); font-weight:800;}
+  .rkw-row{padding:11px 0; border-bottom:1px solid var(--line);}
+  .rkw-row:last-child{border-bottom:none;}
+  .rkw-row.ours{background:var(--tint); margin:0 -10px; padding:11px 10px; border-radius:12px; border-bottom:none;}
+  .rkw-row .rkw-name{font-size:12.5px; font-weight:700; margin-bottom:7px;}
+  .rkw-row.ours .rkw-name{color:var(--green); font-weight:800;}
+  .rvkw span.common{background:var(--gold-s); border-color:var(--gold); color:#7a5a1c; font-weight:700;}
 
   /* 경쟁 진단 */
   .panel.diag{border-color:#e7dcc0; box-shadow:0 10px 26px rgba(150,120,40,.06);}
@@ -266,19 +273,36 @@ function profilePanel(profiles){
   const bt=(on,t)=>`<span class="bchip ${on?'on':'off'}">${t}</span>`;
   const rows=profiles.map(p=>{
     const nd = p.news_days==null?'-':`${p.news_days}일 전`;
+    const star = p.review_score>0?` <span class="star num">★${p.review_score}</span>`:'';
     return `<tr class="${p.is_ours?'ours':''}">
-      <td>${esc(p.subject)}${p.is_ours?' · 우리':''}</td>
+      <td>${esc(p.subject)}${p.is_ours?' · 우리':''}${star}</td>
       <td>${p.visitor_reviews==null?'-':fmtN(p.visitor_reviews)}</td>
       <td>${p.blog_reviews==null?'-':fmtN(p.blog_reviews)}</td>
       <td>${p.reply_rate==null?'-':p.reply_rate+'%'}</td>
+      <td>${p.reviews_per_week==null?'-':'주 '+p.reviews_per_week+'건'}</td>
       <td>${nd}</td>
       <td>${bt(p.has_booking,'예약')}${bt(p.has_talk,'톡톡')}${bt(p.has_coupon,'쿠폰')}</td>
     </tr>`;
   }).join('');
-  return `<div class="panel"><h3>경쟁사 프로파일 비교</h3><div class="psub">상위 노출 업체와 리뷰·세팅을 나란히 · 방문자리뷰=영수증 인증 · 답변율=최근 리뷰 표본 기준</div>
+  return `<div class="panel"><h3>경쟁사 프로파일 비교</h3><div class="psub">상위 노출 업체와 리뷰·세팅을 나란히 · 방문자리뷰=영수증 인증 · 답변율·리뷰 유입=최근 리뷰 표본 기준</div>
     <div style="overflow-x:auto"><table class="ptbl">
-      <tr><th>업체</th><th>방문자리뷰</th><th>블로그리뷰</th><th>답변율</th><th>최근소식</th><th>버튼</th></tr>
+      <tr><th>업체</th><th>방문자리뷰</th><th>블로그리뷰</th><th>답변율</th><th>리뷰 유입</th><th>최근소식</th><th>버튼</th></tr>
       ${rows}</table></div></div>`;
+}
+
+// 대표키워드 전략 비교 — 각 업체가 스마트플레이스에 직접 세팅한 검색 키워드
+function repKwPanel(profiles){
+  const withKw=profiles.filter(p=>p.rep_keywords&&p.rep_keywords.length);
+  if(!withKw.length) return '';
+  const cnt={};
+  withKw.forEach(p=>[...new Set(p.rep_keywords)].forEach(k=>cnt[k]=(cnt[k]||0)+1));
+  const rows=withKw.map(p=>`<div class="rkw-row${p.is_ours?' ours':''}">
+      <div class="rkw-name">${esc(p.subject)}${p.is_ours?' · 우리':''}</div>
+      <div class="rvkw">${p.rep_keywords.map(k=>`<span class="${cnt[k]>=2?'common':''}">${esc(k)}</span>`).join('')}</div>
+    </div>`).join('');
+  return `<div class="panel"><h3>대표키워드 전략 비교</h3>
+    <div class="psub">각 업체가 스마트플레이스에 직접 세팅한 검색 키워드 · <b>금색 칩 = 2곳 이상 공통(시장 필수 키워드)</b> · 나머지 = 그 업체의 차별화 키워드</div>
+    ${rows}</div>`;
 }
 
 // 경쟁 진단 — 우리 vs 경쟁사 평균, 강점/약점 + 처방
@@ -293,6 +317,8 @@ function diagnosisPanel(profiles){
       rx:'블로그 리뷰가 부족해요. 블로그 발행을 늘려 노출을 넓히세요 (BlogStudio 대행)'},
     {l:'리뷰 답변율', unit:'%', better:'high', ours:ours.reply_rate, comp:avg(comps.map(c=>c.reply_rate)),
       rx:'리뷰 답변율이 낮아요. 리뷰마다 답글을 달아 관리 신호를 높이세요'},
+    {l:'리뷰 유입 속도', unit:'건/주', better:'high', ours:ours.reviews_per_week, comp:avg(comps.map(c=>c.reviews_per_week)),
+      rx:'최근 리뷰 유입이 경쟁사보다 느려요. 매장 내 리뷰 유도(QR·안내문구)로 속도를 높이세요'},
     {l:'소식 최신성', unit:'일 전', better:'low', ours:ours.news_days, comp:avg(comps.map(c=>c.news_days)),
       rx:'소식이 뜸해요. 주 1회 소식으로 "관리되는 플레이스" 신호를 유지하세요'},
   ];
@@ -309,6 +335,7 @@ function diagnosisPanel(profiles){
   if(!ours.has_talk)    rx.push('톡톡이 연결 안 됐어요. 문의 응대 채널을 켜세요');
   if(!ours.has_coupon)  rx.push('쿠폰이 없어요. 쿠폰을 걸면 방문 유도에 도움돼요');
   if((ours.photos||0)<10) rx.push('대표 사진이 부족해요(10장 미만). 사진을 보강하세요');
+  if(!ours.rep_keywords||!ours.rep_keywords.length) rx.push('플레이스 대표키워드가 비어 있어요. 손님이 실제 검색하는 단어 5개로 채우세요');
 
   const winH = wins.length? wins.join('') : '<div class="dg-empty">아직 앞서는 항목이 없어요</div>';
   const loseH = loses.length? loses.join('') : '<div class="dg-empty">지표상 뒤처지는 항목이 없어요 👍</div>';
@@ -338,13 +365,14 @@ function statPanel(lastM,prevM){
 // 키워드 경쟁 카드 (순위 + 상위 업체 막대)
 function keywordCard(kw, s){
   const nowR=latestRank(s), fl=firstLast(s);
+  let vol=null; for(let i=s.length-1;i>=0;i--){ if(s[i].search_volume!=null){ vol=s[i].search_volume; break; } }
   let dl=''; if(fl){ const diff=fl.first-fl.last;
     dl = diff>0?`<div class="dl up num">${fl.first}위 → ${diff}계단 상승</div>`
        : diff<0?`<div class="dl down num">${fl.first}위 → ${-diff}계단 하락</div>`
        : `<div class="dl flat">순위 유지</div>`; }
   const cur = nowR!=null?`<div class="big num">${nowR}<span class="u">위</span></div>`:`<div class="big out">순위권 밖</div>`;
   return `<div class="panel"><div class="kw-top">
-      <div><div class="kw-name">${esc(kw)}</div><div class="kw-sub">네이버 통합검색</div></div>
+      <div><div class="kw-name">${esc(kw)}</div><div class="kw-sub">네이버 통합검색${vol!=null?` · 한 달에 <b class="num">${fmtN(vol)}</b>번 검색되는 키워드`:''}</div></div>
       <div class="kw-cur">${cur}${dl}</div>
     </div>${topsBars(s)||'<div class="kw-empty">상위 업체 데이터가 아직 없습니다.</div>'}</div>`;
 }
@@ -401,6 +429,10 @@ function render(d){
   const profiles=d.profiles||[];
   const oursP=profiles.find(x=>x.is_ours);
   h+=dashRow('b', setupPanel(oursP), profilePanel(profiles));
+
+  // 대표키워드 전략 비교 (전체 폭)
+  const rkw=repKwPanel(profiles);
+  if(rkw) h+=`<div style="margin-top:16px">${rkw}</div>`;
 
   // 키워드별 경쟁 현황 (2단 카드)
   if(kws.length){
