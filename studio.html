@@ -51,6 +51,7 @@
   .panel .sub{font-size:12.5px; color:var(--soft); margin-bottom:16px;}
   label{display:block; font-size:13px; font-weight:800; color:var(--ink); margin:15px 0 6px;}
   label .lsub{font-weight:500; color:var(--soft); font-size:12px; margin-left:4px;}
+  label .lreq{font-size:10px; font-weight:800; color:#c0392b; background:#fdeae6; padding:1px 7px; border-radius:9px; margin-left:6px; vertical-align:1px;}
   input,textarea{width:100%; border:1px solid var(--line); border-radius:10px; padding:11px 12px;
     font-size:14px; font-family:inherit; outline:none; transition:.15s;}
   input:focus,textarea:focus{border-color:var(--green); box-shadow:0 0 0 3px var(--tint);}
@@ -288,8 +289,9 @@ function selectTool(id){
 }
 function renderFields(){
   const lab = s => s.replace(/\s*(\([^)]*\))/g, ' <span class="lsub">$1</span>');
+  const req = f => (cur.req||[]).includes(f.k) ? ' <span class="lreq">필수</span>' : '';
   document.getElementById('fields').innerHTML = (cur.fields||[]).map(f=>
-    `<label>${lab(f.l)}</label>${f.big?`<textarea id="f_${f.k}" placeholder="${f.ph}"></textarea>`:`<input id="f_${f.k}" placeholder="${f.ph}">`}`
+    `<label>${lab(f.l)}${req(f)}</label>${f.big?`<textarea id="f_${f.k}" placeholder="${f.ph}"></textarea>`:`<input id="f_${f.k}" placeholder="${f.ph}">`}`
     + (f.k==='target_keyword' ? `<div id="kpChips" style="display:none;margin:-4px 0 10px"></div>` : '')
   ).join('');
   // 토큰을 붙여넣으면 keyword-plan 추천 칩 표시 (target_keyword 필드가 있는 툴만)
