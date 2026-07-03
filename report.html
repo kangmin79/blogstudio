@@ -101,6 +101,19 @@
   .phone-adwarn{position:sticky; top:0; left:0; right:0; z-index:2; text-align:center; font-size:11px; font-weight:700;
     color:#7a5a12; background:rgba(255,246,220,.96); border-bottom:1px solid #eadcae; padding:6px 8px;}
   .phone-adwarn b{color:#9a6b00;}
+  /* 추천 키워드 플랜 */
+  .kp-head{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0 10px; padding:12px 14px;
+    background:#f2f8f5; border:1px solid #d9e8e0; border-radius:12px; font-size:15px;}
+  .kp-badge{background:var(--primary); color:#fff; font-size:11px; font-weight:800; padding:3px 9px; border-radius:99px;}
+  .kp-headmeta{font-size:12.5px; color:#5b6a62;}
+  .kp-tbl td{vertical-align:middle;}
+  .kp-kw{font-weight:700;}
+  .kp-comp{font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px;}
+  .kp-comp.lo{background:#e5f4ec; color:#12805c;} .kp-comp.mid{background:#fdf3dd; color:#9a6b00;} .kp-comp.hi{background:#fde8e4; color:#c0392b;}
+  .kp-dim{color:#98a49e; font-size:12px;} .kp-out{color:#c0392b; font-size:12px; font-weight:700;}
+  .kp-why{font-size:12px; color:#5b6a62;}
+  .kp-note{margin-top:11px; font-size:12.5px; color:#5b6a62; background:#fbf8f1; border:1px solid #efe6d2; border-radius:10px; padding:10px 13px; line-height:1.65;}
+  .kp-note b{color:#9a6b00;}
   .proof-verify{display:block; margin-top:12px; font-size:12.5px; font-weight:700; color:var(--primary);
     text-decoration:none; border:1px solid var(--border); border-radius:10px; padding:10px 12px; text-align:center;
     transition:background .13s,border-color .13s;}
@@ -291,6 +304,16 @@ async function load(){
     const data=await res.json();
     if(!res.ok || !data){ showErr('리포트를 찾을 수 없습니다','링크가 만료되었거나 잘못되었습니다.'); return; }
     render(data);
+    // 키워드 플랜이 아직 없으면 백그라운드에서 1회 생성 → 생기면 다시 그림 (self-healing)
+    if(data.place && !data.place.keyword_plan){
+      try{
+        const kp=await fetch(SB+'/functions/v1/keyword-plan',{method:'POST',
+          headers:{'Authorization':'Bearer '+ANON,'Content-Type':'application/json'},
+          body:JSON.stringify({place_token:token})});
+        const kj=await kp.json();
+        if(kp.ok && kj.plan){ data.place.keyword_plan=kj.plan; render(data); }
+      }catch(_){/* 플랜 없이도 리포트는 정상 */}
+    }
   }catch(e){ showErr('불러오기 오류', e.message); }
 }
 
@@ -390,6 +413,34 @@ function repKwPanel(profiles){
   return `<div class="panel"><h3>대표키워드 전략 비교</h3>
     <div class="psub">각 업체가 스마트플레이스에 직접 세팅한 검색 키워드 · <b>금색 칩 = 2곳 이상 공통(시장 필수 키워드)</b> · 나머지 = 그 업체의 차별화 키워드</div>
     ${rows}</div>`;
+}
+
+// 추천 키워드 플랜 — keyword-plan 엔진(검색광고 실측 채점)이 뽑은 공략 키워드
+function keywordPlanPanel(plan){
+  if(!plan || !plan.head) return '';
+  const compChip=c=>c?`<span class="kp-comp ${c==='낮음'?'lo':c==='높음'?'hi':'mid'}">${c}</span>`:'-';
+  const rankTxt=s=>{
+    if(!s.measured) return '<span class="kp-dim">미측정</span>';
+    return s.our_rank==null ? '<span class="kp-out">순위권 밖</span>' : `<b class="num">${s.our_rank}위</b>`;
+  };
+  const h=plan.head;
+  const subRows=(plan.subs||[]).map(s=>`<tr>
+      <td class="kp-kw">${esc(s.keyword)}</td>
+      <td class="num">${fmtN(s.volume)}</td>
+      <td>${compChip(s.comp)}</td>
+      <td>${rankTxt(s)}</td>
+      <td class="kp-why">${esc((s.reasons||[]).join(' · '))||'-'}</td>
+    </tr>`).join('');
+  const dt=(plan.generated_at||'').slice(0,10).replace(/-/g,'.');
+  return `<div class="panel"><h3>추천 키워드 플랜 — 이 검색어들을 공략합니다</h3>
+    <div class="psub">네이버 검색광고 <b>실측 검색량·경쟁도</b> + 경쟁사 키워드 세팅 + 우리 순위를 채점해 자동 추출 · ${dt} 기준</div>
+    <div class="kp-head"><span class="kp-badge">대표</span><b>${esc(h.keyword)}</b>
+      <span class="kp-headmeta">월 ${fmtN(h.volume)}회 검색 · ${rankTxt(h)} — 순위 추이를 증명하는 기준 키워드</span></div>
+    <div style="overflow-x:auto"><table class="ptbl kp-tbl">
+      <tr><th>세부(공략) 키워드</th><th>월 검색량</th><th>광고 경쟁</th><th>현재 순위</th><th>선정 이유</th></tr>
+      ${subRows}</table></div>
+    <div class="kp-note">대표 키워드는 경쟁이 치열해 시간이 걸립니다. 그래서 <b>세부 키워드부터 순위에 들여보내고</b>,
+      발행하는 원고마다 이 중 하나를 배정해 그 검색어에 노출되게 만듭니다. 들어간 키워드는 위 추이 차트에 그대로 찍힙니다.</div></div>`;
 }
 
 // 경쟁 진단 — 우리 vs 경쟁사 평균, 강점/약점 + 처방
@@ -628,6 +679,10 @@ function render(d){
   // 대표키워드 전략 비교 (전체 폭)
   const rkw=repKwPanel(profiles);
   if(rkw) h+=`<div style="margin-top:16px">${rkw}</div>`;
+
+  // 추천 키워드 플랜 (전체 폭) — "우리가 적절한 키워드를 추출해 원고를 배정"
+  const kplan=keywordPlanPanel(p.keyword_plan);
+  if(kplan) h+=`<div style="margin-top:16px">${kplan}</div>`;
 
   // 키워드별 경쟁 현황 (2단 카드)
   if(kws.length){

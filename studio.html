@@ -76,6 +76,10 @@
   .spin{display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.4);
     border-top-color:#fff; border-radius:50%; animation:sp .7s linear infinite; vertical-align:-2px; margin-right:6px;}
   @keyframes sp{to{transform:rotate(360deg);}}
+  .kpchip{display:inline-block; margin:0 6px 6px 0; padding:5px 11px; font-size:12.5px; font-weight:600;
+    color:var(--green); background:#eef7f2; border:1px solid #cfe6da; border-radius:99px; cursor:pointer;}
+  .kpchip:hover{background:#dff0e7;}
+  .kpchip small{color:#8aa094; font-weight:500;}
 
   /* 로그인 게이트 + 사이드바 유저박스 */
   .gate{position:fixed; inset:0; background:var(--bg); display:none; align-items:center;
@@ -195,6 +199,7 @@ const TOOLS = [
     desc:'업체 정보만 넣으면 네이버 플레이스 상위노출용 정보성 글을 만들어요. 진단 데이터를 연결하면 실측 검색량·경쟁·리뷰특성 기반으로 써요.',
     fields:[
       {k:'place_token', l:'📊 진단 데이터 연결 (선택) — 리포트 링크/토큰 붙여넣기', ph:'https://blogstudio.kr/report.html?t=... 또는 토큰'},
+      {k:'target_keyword', l:'🎯 타겟 키워드 (선택) — 이 글이 노릴 검색어 하나', ph:'예: 송도어린이치과 (진단 연결 시 추천 키워드가 떠요)'},
       {k:'name', l:'상호명 (데이터 연결 시 자동)', ph:'예: 미소플러스치과'},
       {k:'region', l:'지역', ph:'예: 송도'},
       {k:'biztype', l:'업종', ph:'예: 치과'},
@@ -205,6 +210,7 @@ const TOOLS = [
     desc:'주제만 주면 알맹이 있는 정보성 블로그 글을 써요.',
     fields:[
       {k:'topic', l:'주제/키워드', ph:'예: 여름철 강아지 건강관리', big:true},
+      {k:'target_keyword', l:'🎯 타겟 키워드 (선택) — 이 글이 노릴 검색어 하나', ph:'예: 송도 강아지 유치원'},
       {k:'must', l:'꼭 넣을 내용 (선택)', ph:'예: 산책 시간, 수분 섭취', big:true},
     ]},
   { id:'visit_review', cat:'블로그 생성', ic:'⭐', name:'방문후기', soon:true },
@@ -286,7 +292,28 @@ function selectTool(id){
 function renderFields(){
   document.getElementById('fields').innerHTML = (cur.fields||[]).map(f=>
     `<label>${f.l}</label>${f.big?`<textarea id="f_${f.k}" placeholder="${f.ph}"></textarea>`:`<input id="f_${f.k}" placeholder="${f.ph}">`}`
+    + (f.k==='target_keyword' ? `<div id="kpChips" style="display:none;margin:-4px 0 10px"></div>` : '')
   ).join('');
+  // 토큰을 붙여넣으면 keyword-plan 추천 칩 표시 (target_keyword 필드가 있는 툴만)
+  const tokEl=document.getElementById('f_place_token'), tgtEl=document.getElementById('f_target_keyword');
+  if(tokEl && tgtEl) tokEl.addEventListener('change', ()=>loadKwChips(tokEl.value));
+}
+async function loadKwChips(raw){
+  const box=document.getElementById('kpChips'); if(!box) return;
+  const m=(raw||'').match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  if(!m){ box.style.display='none'; return; }
+  box.style.display='block';
+  box.innerHTML='<span style="font-size:12px;color:#98a49e">추천 키워드 불러오는 중…</span>';
+  try{
+    const r=await fetch(SB_URL+'/functions/v1/keyword-plan',{method:'POST',
+      headers:{'Authorization':'Bearer '+SB_ANON,'Content-Type':'application/json'},
+      body:JSON.stringify({place_token:m[0]})});
+    const j=await r.json();
+    if(!r.ok || !j.plan){ box.style.display='none'; return; }
+    const chips=[j.plan.head, ...(j.plan.subs||[])].filter(Boolean).slice(0,9);
+    box.innerHTML='<div style="font-size:12px;color:#5b6a62;margin-bottom:6px">🎯 실측 기반 추천 — 누르면 타겟 키워드로 들어가요 (월 검색량)</div>'
+      + chips.map(c=>`<button type="button" class="kpchip" onclick="document.getElementById('f_target_keyword').value='${esc(c.keyword)}'">${esc(c.keyword)} <small>${Number(c.volume||0).toLocaleString()}</small></button>`).join('');
+  }catch(_){ box.style.display='none'; }
 }
 
 async function generate(){
