@@ -135,7 +135,7 @@
     <div class="head">
       <h1 id="hTitle">플레이스 최적화 리뷰</h1>
       <p id="hDesc">업체 정보만 넣으면 네이버 플레이스 상위노출용 정보성 글을 만들어요.</p>
-      <div class="diff">⭐ 가제트 차별점: 뜬구름 아닌 <b>실제 정보(수치·항목)</b>가 든 글</div>
+      <div class="diff">원칙 — 뜬구름 없이 <b>실제 정보(수치·항목)</b>가 든 글만 만듭니다</div>
     </div>
 
     <div class="work">
@@ -143,18 +143,18 @@
         <h3 id="pTitle">입력</h3>
         <div class="sub" id="pSub">필요한 것만 채우세요. 나머진 AI가 알아서.</div>
         <div id="fields"></div>
-        <button class="gen" id="genBtn" onclick="generate()">✨ 글 생성 (1P)</button>
+        <button class="gen" id="genBtn" onclick="generate()">글 생성 (1P)</button>
       </div>
 
       <div class="result">
         <div class="rbar">
-          <span class="t">📄 미리보기 (네이버 스타일)</span>
+          <span class="t">미리보기 (네이버 스타일)</span>
           <div class="act">
             <button onclick="copyBody()">본문 복사</button>
           </div>
         </div>
         <div id="rContent">
-          <div class="empty"><div class="big">✍️</div>왼쪽에서 입력하고 <b>글 생성</b>을 눌러보세요</div>
+          <div class="empty">왼쪽에서 입력하고 <b>글 생성</b>을 눌러보세요</div>
         </div>
       </div>
     </div>
@@ -195,53 +195,53 @@ async function bootAuth(){
 // 툴 레지스트리 (가제트 클론 — cat=카테고리, soon=준비중, req=필수필드)
 const TOOLS = [
   // ── 블로그 생성 ──
-  { id:'place_review', cat:'블로그 생성', ic:'📍', name:'플레이스 최적화 리뷰', flag:true, req:['name'],
+  { id:'place_review', cat:'블로그 생성', name:'플레이스 최적화 리뷰', flag:true, req:['name'],
     desc:'업체 정보만 넣으면 네이버 플레이스 상위노출용 정보성 글을 만들어요. 진단 데이터를 연결하면 실측 검색량·경쟁·리뷰특성 기반으로 써요.',
     fields:[
-      {k:'place_token', l:'📊 진단 데이터 연결 (선택) — 리포트 링크/토큰 붙여넣기', ph:'https://blogstudio.kr/report.html?t=... 또는 토큰'},
-      {k:'target_keyword', l:'🎯 타겟 키워드 (선택) — 이 글이 노릴 검색어 하나', ph:'예: 송도어린이치과 (진단 연결 시 추천 키워드가 떠요)'},
+      {k:'place_token', l:'진단 데이터 연결 (선택)', ph:'리포트 링크(report.html?t=…) 또는 토큰 붙여넣기'},
+      {k:'target_keyword', l:'타겟 키워드 (선택)', ph:'이 글이 노릴 검색어 하나 — 진단 연결 시 추천이 떠요'},
       {k:'name', l:'상호명 (데이터 연결 시 자동)', ph:'예: 미소플러스치과'},
       {k:'region', l:'지역', ph:'예: 송도'},
       {k:'biztype', l:'업종', ph:'예: 치과'},
       {k:'topic', l:'정보 주제 (선택 — 비우면 AI가 알아서)', ph:'예: 임플란트 전 알아야 할 것', big:true},
       {k:'keywords', l:'지역+업종 키워드 (선택)', ph:'예: 송도치과, 송도임플란트'},
     ]},
-  { id:'info_blog', cat:'블로그 생성', ic:'📝', name:'정보성 블로그', req:['topic'],
+  { id:'info_blog', cat:'블로그 생성', name:'정보성 블로그', req:['topic'],
     desc:'주제만 주면 알맹이 있는 정보성 블로그 글을 써요.',
     fields:[
       {k:'topic', l:'주제/키워드', ph:'예: 여름철 강아지 건강관리', big:true},
-      {k:'target_keyword', l:'🎯 타겟 키워드 (선택) — 이 글이 노릴 검색어 하나', ph:'예: 송도 강아지 유치원'},
+      {k:'target_keyword', l:'타겟 키워드 (선택)', ph:'이 글이 노릴 검색어 하나 — 예: 송도 강아지 유치원'},
       {k:'must', l:'꼭 넣을 내용 (선택)', ph:'예: 산책 시간, 수분 섭취', big:true},
     ]},
-  // ── ⭐ 플레이스 관리 (가제트엔 없는 우리만의 레버) ──
-  { id:'place_intro', cat:'⭐ 플레이스 관리', ic:'💬', name:'플레이스 소개글', ours:true, req:['name'],
+  // ── 플레이스 관리 (가제트엔 없는 우리만의 레버) ──
+  { id:'place_intro', cat:'플레이스 관리', name:'플레이스 소개글', ours:true, req:['name'],
     desc:'문제제기→해결→신뢰→행동유도 구조로 예약·전화를 부르는 플레이스 소개글을 써요. (2026 순위 요인)',
     fields:[
-      {k:'place_token', l:'📊 진단 데이터 연결 (선택) — 리포트 링크/토큰 붙여넣기', ph:'https://blogstudio.kr/report.html?t=... 또는 토큰'},
+      {k:'place_token', l:'진단 데이터 연결 (선택)', ph:'리포트 링크(report.html?t=…) 또는 토큰 붙여넣기'},
       {k:'name', l:'상호명 (데이터 연결 시 자동)', ph:'예: 미소플러스치과'},
       {k:'region', l:'지역', ph:'예: 송도'},
       {k:'biztype', l:'업종', ph:'예: 치과'},
       {k:'strength', l:'우리 가게 강점·특징', ph:'예: 디지털 구강스캐너, 야간진료, 20년 경력', big:true},
       {k:'keywords', l:'대표키워드 (선택)', ph:'예: 송도치과, 송도임플란트'},
     ]},
-  { id:'keyword_set', cat:'⭐ 플레이스 관리', ic:'🎯', name:'대표키워드 세팅', ours:true, req:['region','biztype'],
+  { id:'keyword_set', cat:'플레이스 관리', name:'대표키워드 세팅', ours:true, req:['region','biztype'],
     desc:'지역+업종으로 검색의도가 겹치지 않게 대표·보조 키워드를 분산 추천해요. 진단 데이터 연결 시 실측 검색량·경쟁사 키워드 갭 기반. (세팅 완성도 요인)',
     fields:[
-      {k:'place_token', l:'📊 진단 데이터 연결 (선택) — 리포트 링크/토큰 붙여넣기', ph:'https://blogstudio.kr/report.html?t=... 또는 토큰'},
+      {k:'place_token', l:'진단 데이터 연결 (선택)', ph:'리포트 링크(report.html?t=…) 또는 토큰 붙여넣기'},
       {k:'region', l:'지역 (데이터 연결 시 자동)', ph:'예: 송도'},
       {k:'biztype', l:'업종', ph:'예: 치과'},
       {k:'strength', l:'특화/강점 (선택)', ph:'예: 임플란트·교정 특화', big:true},
     ]},
-  { id:'place_news', cat:'⭐ 플레이스 관리', ic:'📢', name:'소식·이벤트 글', ours:true, req:['topic'],
+  { id:'place_news', cat:'플레이스 관리', name:'소식·이벤트 글', ours:true, req:['topic'],
     desc:'플레이스 소식(이벤트·공지)을 짧고 명확하게. 꾸준한 관리가 곧 순위예요. (지속 관리 요인)',
     fields:[
-      {k:'place_token', l:'📊 진단 데이터 연결 (선택) — 리포트 링크/토큰 붙여넣기', ph:'https://blogstudio.kr/report.html?t=... 또는 토큰'},
+      {k:'place_token', l:'진단 데이터 연결 (선택)', ph:'리포트 링크(report.html?t=…) 또는 토큰 붙여넣기'},
       {k:'name', l:'상호명 (데이터 연결 시 자동)', ph:'예: 미소플러스치과'},
       {k:'region', l:'지역', ph:'예: 송도'},
       {k:'biztype', l:'업종', ph:'예: 치과'},
       {k:'topic', l:'소식 내용', ph:'예: 7월 한 달 임플란트 상담 무료 이벤트', big:true},
     ]},
-  { id:'review_reply', cat:'⭐ 플레이스 관리', ic:'💌', name:'리뷰 답글', ours:true, req:['review'],
+  { id:'review_reply', cat:'플레이스 관리', name:'리뷰 답글', ours:true, req:['review'],
     desc:'손님 리뷰에 진심 담긴 개인화 답글을 달아드려요. 리뷰 응답도 순위 요인이에요.',
     fields:[
       {k:'name', l:'상호명', ph:'예: 미소플러스치과'},
@@ -250,7 +250,7 @@ const TOOLS = [
     ]},
 
   // ── 키워드 / 이미지 (준비중) ──
-  { id:'kw_volume', cat:'키워드', ic:'🔑', name:'키워드 검색량', ours:true, req:['keywords'], kind:'keyword',
+  { id:'kw_volume', cat:'키워드', name:'키워드 검색량', ours:true, req:['keywords'], kind:'keyword',
     desc:'네이버 실제 월간 검색량과 경쟁도를 조회해요. 관련 추천 키워드도 함께 (검색광고 데이터).',
     fields:[ {k:'keywords', l:'키워드 (쉼표로 구분, 최대 5개)', ph:'예: 송도치과, 송도임플란트, 송도치아교정', big:true} ] },
   // 준비중 항목은 목록에서 뺀다 (2026-07-04 결정): 되는 것만 보여주는 게 신뢰.
@@ -265,7 +265,7 @@ function renderTools(){
   list.innerHTML = cats.map(cat=>{
     const items = TOOLS.filter(t=>t.cat===cat).map(t=>
       `<div class="tool ${t.id===cur.id?'on':''}" onclick="${t.soon?'':`selectTool('${t.id}')`}" ${t.soon?'data-soon':''}>
-        <span class="ic">${t.ic}</span> ${t.name}
+        ${t.name}
         ${t.soon?'<span class="soon">준비중</span>':(t.flag?'<span class="tag-new">추천</span>':(t.ours?'<span class="tag-new">우리만</span>':''))}
       </div>`).join('');
     return `<div class="cat">${cat}</div>${items}`;
@@ -276,9 +276,9 @@ function selectTool(id){
   document.getElementById('hTitle').textContent = cur.name;
   document.getElementById('hDesc').textContent = cur.desc;
   const kw = cur.kind==='keyword';
-  document.getElementById('genBtn').textContent = kw ? '🔍 검색량 조회' : '✨ 글 생성 (1P)';
+  document.getElementById('genBtn').textContent = kw ? '검색량 조회' : '글 생성 (1P)';
   renderTools(); renderFields();
-  document.getElementById('rContent').innerHTML='<div class="empty"><div class="big">'+(kw?'🔍':'✍️')+'</div>왼쪽에서 입력하고 <b>'+(kw?'검색량 조회':'글 생성')+'</b>를 눌러보세요</div>';
+  document.getElementById('rContent').innerHTML='<div class="empty">왼쪽에서 입력하고 <b>'+(kw?'검색량 조회':'글 생성')+'</b>를 눌러보세요</div>';
 }
 function renderFields(){
   document.getElementById('fields').innerHTML = (cur.fields||[]).map(f=>
@@ -302,7 +302,7 @@ async function loadKwChips(raw){
     const j=await r.json();
     if(!r.ok || !j.plan){ box.style.display='none'; return; }
     const chips=[j.plan.head, ...(j.plan.subs||[])].filter(Boolean).slice(0,9);
-    box.innerHTML='<div style="font-size:12px;color:#5b6a62;margin-bottom:6px">🎯 실측 기반 추천 — 누르면 타겟 키워드로 들어가요 (월 검색량)</div>'
+    box.innerHTML='<div style="font-size:12px;color:#5b6a62;margin-bottom:6px">실측 기반 추천 — 누르면 타겟 키워드로 들어갑니다 · 숫자는 월 검색량</div>'
       + chips.map(c=>`<button type="button" class="kpchip" onclick="document.getElementById('f_target_keyword').value='${esc(c.keyword)}'">${esc(c.keyword)} <small>${Number(c.volume||0).toLocaleString()}</small></button>`).join('');
   }catch(_){ box.style.display='none'; }
 }
@@ -346,7 +346,7 @@ async function generate(){
     else if(!res.ok) throw new Error(j.error||'생성 실패');
     else renderResult(j);
   }catch(e){ alert('오류: '+e.message); }
-  btn.disabled=false; btn.textContent='✨ 글 생성 (1P)';
+  btn.disabled=false; btn.textContent='글 생성 (1P)';
 }
 
 let lastBody='';
@@ -356,7 +356,7 @@ function renderResult(j){
   let html = '';
   if(j.brief){
     html += `<div style="margin:16px 18px 0;background:#e8f6f0;border:1px solid #bfe3d5;border-radius:12px;padding:14px 16px;">
-      <div style="font-size:12.5px;font-weight:800;color:#12805c;margin-bottom:6px;">📊 이 실측 데이터가 반영됐어요 (네이버 진단)</div>
+      <div style="font-size:12.5px;font-weight:800;color:#12805c;margin-bottom:6px;">이 실측 데이터가 반영됐습니다 (네이버 진단)</div>
       <div style="font-size:12px;color:#374151;line-height:1.7;white-space:pre-line;">${esc(j.brief.replace(/^\[.*?\]\n/,''))}</div>
     </div>`;
   }
@@ -364,7 +364,7 @@ function renderResult(j){
   const paras = (j.body||'').split(/\n\s*\n/);
   for(let p of paras){
     p=p.trim(); if(!p) continue;
-    if(p==='[이미지]'){ html+='<div class="imgph">🖼️ 이미지 자리 (Gemini 생성 + 자동배치)</div>'; continue; }
+    if(p==='[이미지]'){ html+='<div class="imgph">이미지 자리 — 사진이 자동 배치됩니다</div>'; continue; }
     // **소제목** → 강조 헤딩
     const m = p.match(/^\*\*(.+?)\*\*$/);
     if(m){ html+=`<div class="sh">${esc(m[1])}</div>`; continue; }
@@ -392,7 +392,7 @@ async function runKeyword(fields){
     if(!res.ok) throw new Error(j.error||'조회 실패');
     renderKeywordResult(j);
   }catch(e){ alert('오류: '+e.message); }
-  btn.disabled=false; btn.textContent='🔍 검색량 조회';
+  btn.disabled=false; btn.textContent='검색량 조회';
 }
 function compBadge(c){
   const map={'낮음':'#16a34a','중간':'#d97706','높음':'#dc2626'};
@@ -403,7 +403,7 @@ function renderKeywordResult(j){
   const req=j.requested||[], rel=j.related||[];
   lastBody = req.map(r=>`${r.keyword}\t월 ${r.total==null?'-':r.total}회 (경쟁 ${r.comp||'-'})`).join('\n');
   let html='<div style="padding:20px 22px 30px;">';
-  html+='<div style="font-size:13px;font-weight:800;color:#12805c;margin-bottom:10px;">📊 월간 검색량 (PC+모바일)</div>';
+  html+='<div style="font-size:13px;font-weight:800;color:#12805c;margin-bottom:10px;">월간 검색량 (PC+모바일)</div>';
   html+='<table style="width:100%;border-collapse:collapse;font-size:13.5px;">'
       +'<tr style="color:#6b7280;font-size:11.5px;text-align:left;border-bottom:1px solid #e5e7eb;">'
       +'<th style="padding:8px 4px;">키워드</th><th style="text-align:right;">월 검색량</th><th style="text-align:right;">PC</th><th style="text-align:right;">모바일</th><th style="text-align:center;">경쟁</th></tr>';
@@ -417,7 +417,7 @@ function renderKeywordResult(j){
   }
   html+='</table>';
   if(rel.length){
-    html+='<div style="font-size:13px;font-weight:800;color:#12805c;margin:22px 0 10px;">🔎 관련 추천 키워드 <span style="font-weight:500;color:#9ca3af;font-size:11.5px;">검색량 순</span></div>';
+    html+='<div style="font-size:13px;font-weight:800;color:#12805c;margin:22px 0 10px;">관련 추천 키워드 <span style="font-weight:500;color:#9ca3af;font-size:11.5px;">검색량 순</span></div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:8px;">';
     for(const r of rel){
       html+='<div style="border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px;font-size:13px;">'
