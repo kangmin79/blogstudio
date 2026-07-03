@@ -164,6 +164,10 @@ function regFromDiag(id){
   document.getElementById('pf_biztype').value = d.biztype||'';
   if(d.region && d.biztype) document.getElementById('pf_kw').value = d.region+d.biztype;
   document.getElementById('pf_memo').value = '진단신청 · 연락처 '+d.contact;
+  // 진단 신청의 주소·좌표 승계 (내 가게 찾기로 특정된 경우) — rig가 이 좌표 기준으로 검색
+  if(d.road_address) document.getElementById('pf_addr').value = d.road_address;
+  if(d.lon!=null) document.getElementById('pf_lon').value = d.lon;
+  if(d.lat!=null) document.getElementById('pf_lat').value = d.lat;
 }
 async function doneDiag(id){
   if(!confirm('리포트를 보냈나요? 완료 처리하면 목록에서 사라집니다.')) return;
@@ -287,6 +291,9 @@ function openPlaceForm(id){
     +'<div class="row2"><div><label class="fl">지역</label><input class="fi" id="pf_region" value="'+esc(p.region||'')+'" placeholder="송도"></div>'
     +'<div><label class="fl">업종</label><input class="fi" id="pf_biztype" value="'+esc(p.biztype||'')+'" placeholder="치과"></div></div>'
     +'<label class="fl">네이버 플레이스 URL (선택)</label><input class="fi" id="pf_url" value="'+esc(p.place_url||'')+'" placeholder="https://...">'
+    +'<div class="row2"><div><label class="fl">도로명 주소 (선택)</label><input class="fi" id="pf_addr" value="'+esc(p.road_address||'')+'" placeholder="진단 신청에서 자동"></div>'
+    +'<div><label class="fl">네이버 pid (선택)</label><input class="fi" id="pf_pid" value="'+esc(p.naver_pid||'')+'" placeholder="비우면 rig가 자동 확정"></div></div>'
+    +'<input type="hidden" id="pf_lon" value="'+(p.lon==null?'':p.lon)+'"><input type="hidden" id="pf_lat" value="'+(p.lat==null?'':p.lat)+'">'
     +'<label class="fl">추적 키워드 (쉼표 구분)</label><input class="fi" id="pf_kw" value="'+esc((p.target_keywords||[]).join(', '))+'" placeholder="송도치과, 송도임플란트">'
     +'<label class="fl">메모 (선택)</label><input class="fi" id="pf_memo" value="'+esc(p.memo||'')+'">'
     +'<div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">'
@@ -298,14 +305,30 @@ async function savePlace(id){
   const name=document.getElementById('pf_name').value.trim();
   if(!name){ alert('상호명을 넣어주세요.'); return; }
   const kw=document.getElementById('pf_kw').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const { error } = await sb.rpc('admin_upsert_place',{
+  const pid=document.getElementById('pf_pid').value.trim();
+  const lonV=document.getElementById('pf_lon').value, latV=document.getElementById('pf_lat').value;
+  const { data:savedId, error } = await sb.rpc('admin_upsert_place',{
     p_id:id, p_name:name,
     p_region:document.getElementById('pf_region').value.trim()||null,
     p_biztype:document.getElementById('pf_biztype').value.trim()||null,
     p_place_url:document.getElementById('pf_url').value.trim()||null,
-    p_keywords:kw, p_memo:document.getElementById('pf_memo').value.trim()||null });
+    p_keywords:kw, p_memo:document.getElementById('pf_memo').value.trim()||null,
+    p_road_address:document.getElementById('pf_addr').value.trim()||null,
+    p_lon:lonV?parseFloat(lonV):null, p_lat:latV?parseFloat(latV):null,
+    p_naver_pid:pid||null });
   if(error){ alert('저장 실패: '+error.message); return; }
   closeModal(); await loadPlaces();
+  // pid를 아는 상태로 저장했으면 과거 순위 소급을 바로 시도 (관찰 스냅샷·기존 full_list에서 복원)
+  if(pid){ await runBackfill(savedId, true); }
+}
+async function runBackfill(id, silentSkip){
+  const { data, error } = await sb.rpc('backfill_place_ranks',{ p_place_id:id });
+  if(error){ alert('과거순위 소급 실패: '+error.message); return; }
+  if(data && data.ok){
+    alert('과거순위 소급 완료: '+data.inserted+'건 추가 (측정일 '+data.days+'일 · 순위 확인 '+data.matched+'회)\n리포트 추이에 바로 반영됩니다.');
+  } else if(!silentSkip){
+    alert('소급 안 됨: '+((data&&data.reason)||'알 수 없음'));
+  }
 }
 async function delPlace(id,name){
   if(!confirm('['+name+'] 가게와 모든 순위 기록을 삭제할까요? 되돌릴 수 없습니다.')) return;
@@ -371,7 +394,9 @@ async function openPlace(id){
     +'<div style="margin-top:12px;">'+profRows+'</div>'
     +'</div>'
     +'<div style="margin-top:16px;display:flex;gap:8px;justify-content:space-between;align-items:center;">'
+    +'<div style="display:flex;gap:8px;">'
     +'<button class="no" onclick="copyLink(\''+p.share_token+'\')">📋 리포트 링크복사</button>'
+    +'<button class="no" onclick="runBackfill(\''+id+'\')" title="관찰 스냅샷·기존 수집분에서 과거 순위 복원 (pid 필요)">⏪ 과거순위 소급</button></div>'
     +'<button class="no" onclick="closeModal()">닫기</button></div>'
   );
 }
