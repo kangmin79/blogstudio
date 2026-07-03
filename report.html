@@ -50,6 +50,61 @@
   .honest{font-size:12.2px; color:var(--sub); line-height:1.6; margin:16px 4px 0;}
   .honest b{color:var(--text); font-weight:700;}
 
+  /* 네이버 실제 검색 화면 (proof — 데이터 정확성 시각 증명) */
+  .proof-intro{font-size:12.5px; color:var(--sub); line-height:1.65; margin:0 4px 14px;}
+  .proof-intro b{color:var(--text); font-weight:700;}
+  .proof-card{display:flex; flex-direction:column;}
+  .proof-head{display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:16px;}
+  .proof-qlabel{font-size:10.5px; font-weight:700; letter-spacing:.08em; color:var(--light); text-transform:uppercase; margin-bottom:8px;}
+  .proof-kw{display:inline-flex; align-items:center; gap:9px; font-size:19px; font-weight:800; letter-spacing:-.02em; color:var(--text);
+    background:#fff; border:2px solid var(--primary); border-radius:999px; padding:9px 20px 9px 16px; box-shadow:0 4px 12px rgba(18,128,92,.14);}
+  .proof-kw .mag{font-size:15px; line-height:1; filter:saturate(1.1);}
+  .proof-basis{font-size:11px; color:var(--light); margin-top:10px;}
+  .proof-rank{text-align:right; white-space:nowrap;}
+  .proof-rank b{font-size:25px; font-weight:800; color:var(--primary); letter-spacing:-.03em;}
+  .proof-rank span{font-size:12px; color:var(--light); margin-left:1px;}
+  .proof-rank.out b{font-size:14px; color:var(--light);}
+  .proof-body{display:grid; grid-template-columns:330px 1fr; gap:24px; align-items:start; margin-top:4px;}
+  @media(max-width:760px){ .proof-body{grid-template-columns:1fr;} }
+  .phone{position:relative; max-width:100%; margin:0; border-radius:20px; overflow:hidden; max-height:560px; overflow-y:auto;
+    background:#eef1f0; box-shadow:inset 0 0 0 5px #fff, 0 0 0 1px var(--border), 0 8px 22px rgba(40,50,40,.12);}
+  .proof-data{display:flex; flex-direction:column;}
+  .pd-title{font-size:12px; font-weight:800; color:var(--primary); letter-spacing:.02em; margin-bottom:2px;}
+  .pd-sub{font-size:11px; color:var(--light); margin-bottom:12px;}
+  .pd-list{list-style:none; margin:0 0 16px; padding:0;}
+  .pd-list li{display:flex; align-items:center; gap:11px; padding:10px; margin:0 -10px; border-bottom:1px solid var(--line); border-radius:9px; transition:background .12s;}
+  .pd-list li:last-child{border-bottom:0;}
+  .pd-list li.ours{background:#e6f2ec;}
+  .pd-list li:hover{background:#f5f8f6;}
+  .pd-list li.ours:hover{background:#dcece3;}
+  .pd-r{width:24px; height:24px; flex:none; display:flex; align-items:center; justify-content:center; border-radius:7px; background:#eef1ef; color:var(--sub); font-size:12.5px; font-weight:800;}
+  .pd-r.top{background:var(--primary); color:#fff;}
+  .pd-nm{flex:1; font-size:13px; font-weight:600; letter-spacing:-.01em; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .pd-me{display:inline-block; margin-left:6px; font-size:10px; font-weight:800; color:#fff; background:var(--primary); border-radius:5px; padding:1px 6px; vertical-align:1px;}
+  .pd-metric{flex:none; width:220px; display:flex; align-items:center; gap:9px;}
+  .pd-track{flex:1; height:9px; background:#eaeeeb; border-radius:5px; overflow:hidden;}
+  .pd-fill{display:block; height:100%; background:linear-gradient(90deg,#8fc9ac,#12805c); border-radius:5px;}
+  .pd-fill.mine{background:linear-gradient(90deg,#f0c96a,#d99a1a);}
+  .pd-mval{font-size:11px; font-weight:700; color:var(--sub); white-space:nowrap; width:82px; text-align:right;}
+  .pd-mval .u{font-weight:600; color:var(--light);}
+  .pd-empty{color:var(--light); font-size:11px; text-align:center; width:220px;}
+  .pd-visit{flex:none; width:76px; font-size:11px; color:var(--light); white-space:nowrap; text-align:right;}
+  .pd-list li.ad{opacity:.72;}
+  .pd-r.ad{background:#f0e8d4; color:#a9812f; font-size:9.5px; letter-spacing:.02em;}
+  .pd-adtag{display:inline-block; margin-left:6px; font-size:10px; font-weight:700; color:#a9812f; background:#f7efdc; border-radius:5px; padding:1px 6px; vertical-align:1px;}
+  .pd-adnote{flex:none; font-size:11px; color:var(--light);}
+  li.pd-divider{display:block !important; padding:11px 2px 5px; margin:2px 0 0; font-size:10.5px; font-weight:800; color:var(--primary); letter-spacing:.03em; border-bottom:0 !important; background:none !important;}
+  @media(max-width:640px){ .pd-visit{display:none;} .pd-metric,.pd-empty{width:140px;} .pd-mval{width:64px;} }
+  .phone img{display:block; width:100%; height:auto;}
+  .phone-hint{position:sticky; bottom:0; left:0; right:0; text-align:center; font-size:10.5px; color:#fff;
+    background:linear-gradient(transparent, rgba(18,61,46,.78)); padding:16px 0 7px; pointer-events:none;}
+  .proof-verify{display:block; margin-top:12px; font-size:12.5px; font-weight:700; color:var(--primary);
+    text-decoration:none; border:1px solid var(--border); border-radius:10px; padding:10px 12px; text-align:center;
+    transition:background .13s,border-color .13s;}
+  .proof-verify:hover{background:#f2f8f5; border-color:var(--primary);}
+  .proof-note{font-size:10.8px; color:var(--light); line-height:1.55; margin-top:9px;}
+  .proof-note b{color:var(--sub); font-weight:700;}
+
   .sec{display:flex; align-items:baseline; gap:10px; margin:34px 4px 14px;}
   .sec h2{font-size:11.5px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:var(--primary);}
   .sec .ln{flex:1; height:1px; background:var(--border);}
@@ -430,6 +485,85 @@ function dashRow(cls, a, b){
   return `<div class="dash ${cls}">${ps.join('')}</div>`;
 }
 
+// 네이버 실제 검색 화면 (proof) — 왼쪽=실제 화면 / 오른쪽=그 화면을 순위표로 정리.
+// screenshot_url 있는 키워드만. 없으면 '' (섹션 생략).
+function _nkey(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
+function searchProofSection(place, groups, kws, profiles){
+  // 업체명 → 프로파일(리뷰수) 매핑
+  const profByKey={};
+  (profiles||[]).forEach(pr=>{ profByKey[_nkey(pr.subject)]=pr; });
+  const lookupProf=(name)=>{
+    const k=_nkey(name);
+    if(profByKey[k]) return profByKey[k];
+    for(const pk in profByKey){ if(pk&&(pk.includes(k)||k.includes(pk))) return profByKey[pk]; }
+    return null;
+  };
+  const cards=[];
+  kws.forEach(kw=>{
+    const series=groups[kw]||[];
+    const shots=series.filter(x=>x.screenshot_url);
+    if(!shots.length) return;                     // 캡차/미측정 → 이 키워드는 표시 안 함
+    const shot=shots[shots.length-1];             // 최신 캡처
+    const rk=latestRank(series);
+    const dt=(shot.checked_on||'').replace(/-/g,'.');
+    const basis=(place.region?`가게 위치(${esc(place.region)}) 기준 · `:'')+dt+' 캡처';
+    const rankHtml = rk!=null ? `<div class="proof-rank"><b>${rk}</b><span>위</span></div>`
+                              : `<div class="proof-rank out"><b>순위권 밖</b></div>`;
+    // 오른쪽 데이터 = 최신 top_list(광고 제외 오가닉) + 리뷰수 조인 + 블로그 리뷰 막대(격차)
+    // 데이터 소스: screen_list(화면 순서 그대로 · 광고 포함) 우선, 없으면 top_list(오가닉만) 폴백.
+    const useScreen = (shot.screen_list && shot.screen_list.length);
+    const list = useScreen ? shot.screen_list.slice(0,10)
+                           : (shot.top_list||[]).slice(0,8).map(e=>({...e, ad:false}));
+    // 리뷰 수: 항목 자체 값 우선(화면과 같은 순간), 없으면 place_profiles 폴백.
+    const blogOf=(e)=>{ if(e.blog_reviews!=null) return Number(e.blog_reviews);
+      const pr=lookupProf(e.name); return pr&&pr.blog_reviews!=null?Number(pr.blog_reviews):null; };
+    const visitOf=(e)=>{ if(e.visitor_reviews!=null) return Number(e.visitor_reviews);
+      const pr=lookupProf(e.name); return pr&&pr.visitor_reviews!=null?Number(pr.visitor_reviews):null; };
+    const maxBlog=Math.max(1, ...list.filter(e=>!e.ad).map(e=>blogOf(e)||0));
+    let organicStarted=false;
+    const rows=list.map(e=>{
+      if(e.ad){
+        return `<li class="ad"><span class="pd-r ad">AD</span>
+          <span class="pd-nm">${esc(e.name)}<span class="pd-adtag">광고</span></span>
+          <span class="pd-adnote">광고 자리</span></li>`;
+      }
+      let divider='';
+      if(useScreen && !organicStarted){ organicStarted=true; divider=`<li class="pd-divider">↓ 광고 아래 · 실제(오가닉) 순위</li>`; }
+      const blog=blogOf(e), visit=visitOf(e);
+      const metric = blog!=null
+        ? `<span class="pd-metric"><span class="pd-track"><span class="pd-fill${e.ours?' mine':''}" style="width:${Math.max(5,Math.round(blog/maxBlog*100))}%"></span></span>
+             <span class="pd-mval">${blog.toLocaleString()}<span class="u"> 블로그</span></span></span>
+           <span class="pd-visit">방문 ${visit!=null?visit.toLocaleString():'-'}</span>`
+        : `<span class="pd-empty">리뷰 데이터 준비 중</span>`;
+      return `${divider}<li class="${e.ours?'ours':''}"><span class="pd-r${e.rank<=3?' top':''}">${e.rank}</span>
+        <span class="pd-nm">${esc(e.name)}${e.ours?'<span class="pd-me">우리</span>':''}</span>
+        ${metric}</li>`;
+    }).join('');
+    const dataPanel = rows ? `<div class="proof-data">
+        <div class="pd-title">이 화면을 순위표로 정리하면</div>
+        <div class="pd-sub">광고 제외 실제(오가닉) 순위 · 막대 = 블로그 리뷰 수(1위 대비) · <b style="color:var(--gold)">블로그 리뷰는 저희가 늘려드리는 지표</b></div>
+        <ol class="pd-list">${rows}</ol>
+        <a class="proof-verify" href="https://search.naver.com/search.naver?query=${encodeURIComponent(kw)}" target="_blank" rel="noopener">👉 네이버에서 '${esc(kw)}' 직접 검색해 확인하기</a>
+      </div>` : '';
+    cards.push(`<div class="panel proof-card">
+      <div class="proof-head"><div>
+        <div class="proof-qlabel">네이버에 이렇게 검색했습니다</div>
+        <div class="proof-kw"><span class="mag">🔍</span>${esc(kw)}</div>
+        <div class="proof-basis">${basis}</div></div>${rankHtml}</div>
+      <div class="proof-body">
+        <div class="phone"><img src="${esc(shot.screenshot_url)}" alt="네이버 '${esc(kw)}' 검색 화면" loading="lazy">
+          <div class="phone-hint">스크롤하면 순위 목록이 보입니다</div></div>
+        ${dataPanel}
+      </div>
+      <div class="proof-note">※ 화면 맨 위 <b>'광고ⓘ'</b> 표시 항목은 광고 자리입니다. 오른쪽 순위표는 광고를 뺀 <b>실제(오가닉) 순위</b>이며, <b>가게 위치 기준</b>으로 저희가 직접 측정했습니다. 네이버 결과는 보는 위치·시점에 따라 조금씩 달라질 수 있습니다.</div>
+    </div>`);
+  });
+  if(!cards.length) return '';
+  return `<div class="sec"><h2>네이버 실제 검색 화면</h2><div class="ln"></div></div>
+    <div class="proof-intro">숫자로만 말씀드리지 않습니다. <b>왼쪽은 실제로 네이버에서 검색해 캡처한 화면</b>, <b>오른쪽은 그 화면을 순위표로 정리</b>한 것입니다 — 지금 사장님이 직접 검색해 대조해 보실 수 있습니다.</div>
+    ${cards.join('')}`;
+}
+
 let chartRef=null;
 function render(d){
   const p=d.place||{}, ranks=d.ranks||[], months=d.months||[];
@@ -459,6 +593,10 @@ function render(d){
       </div></div>`;
   h+=`<div class="honest"><b>정직하게 알려드립니다.</b> 네이버 순위는 알고리즘과 경쟁 상황에 따라 늘 변동합니다.
       특정 순위를 보장하지 않으며, 실제 측정한 순위 추이와 유입 성장을 있는 그대로 보여드립니다.</div>`;
+
+  // 네이버 실제 검색 화면 (proof — 데이터 정확성 시각 증명)
+  const proof=searchProofSection(p, groups, kws, d.profiles||[]);
+  if(proof) h+=`<div style="margin-top:16px">${proof}</div>`;
 
   // 경쟁 진단 (요약 처방 — 맨 위)
   const diag=diagnosisPanel(d.profiles||[]);
