@@ -102,6 +102,21 @@
   .diag-done .big{font-size:21px; font-weight:800; color:var(--green);}
   .diag-done p{margin-top:10px; font-size:14.5px; color:var(--soft); line-height:1.75;}
   .diag-err{margin-top:12px; font-size:13.5px; color:#dc2626; text-align:center; display:none;}
+  /* 내 가게 찾기 */
+  .dg-find{display:flex; gap:8px;}
+  .dg-find .fi{flex:1;}
+  .dg-find-btn{flex:none; border:1px solid var(--green); background:var(--tint); color:var(--green);
+    font-size:13.5px; font-weight:800; border-radius:10px; padding:0 16px; cursor:pointer;}
+  .dg-find-btn:hover{background:#dff0e7;}
+  .dg-cand-hint{font-size:12.5px; color:var(--soft); margin:10px 2px 6px;}
+  .dg-cand{border:1px solid var(--line); border-radius:10px; padding:10px 13px; margin-bottom:6px;
+    cursor:pointer; font-size:13.5px; background:#fff;}
+  .dg-cand:hover{border-color:var(--green); background:var(--tint);}
+  .dg-cand b{display:block; margin-bottom:2px;}
+  .dg-cand span{font-size:12px; color:var(--soft);}
+  .dg-pick{margin-top:10px; font-size:13px; background:var(--tint); border:1px solid #cfe6da;
+    border-radius:10px; padding:10px 13px; color:var(--green); line-height:1.6;}
+  .dg-pick a{margin-left:8px; font-size:12px; color:var(--soft); text-decoration:underline; cursor:pointer;}
 
   footer{border-top:1px solid var(--line); padding:32px 0 56px; margin-top:20px;
     font-size:13px; color:var(--soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
@@ -207,7 +222,12 @@
     <div class="diag-card">
       <form id="diagForm" onsubmit="return sendDiag(event)">
         <label class="fl">가게 이름 *</label>
-        <input class="fi" id="dg_shop" maxlength="60" placeholder="예: 미소플러스치과" required>
+        <div class="dg-find">
+          <input class="fi" id="dg_shop" maxlength="60" placeholder="예: 미소플러스치과" required autocomplete="off">
+          <button type="button" class="dg-find-btn" id="dg_find" onclick="findPlace()">내 가게 찾기</button>
+        </div>
+        <div id="dg_cands" style="display:none"></div>
+        <div id="dg_picked" style="display:none"></div>
         <div class="diag-row">
           <div>
             <label class="fl">지역 (동네)</label>
@@ -253,6 +273,54 @@
 const SB_URL  = 'https://enqsuymbsugrkmstewek.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucXN1eW1ic3Vncmttc3Rld2VrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDg1MzQsImV4cCI6MjA5ODQyNDUzNH0.LsVx4Eob26nBQ_sD_VjFoSXPgIQcTTaNSql48gdvgLM';
 
+// ── 내 가게 찾기: 동명 가게 특정 (후보 목록 → 선택 → 주소·좌표·업종 자동) ──
+let pickedPlace = null;
+function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+async function findPlace(){
+  const q = document.getElementById('dg_shop').value.trim();
+  const box = document.getElementById('dg_cands');
+  if(q.length < 2){ box.style.display='none'; return; }
+  box.style.display='block';
+  box.innerHTML = '<div class="dg-cand-hint">가게를 찾는 중…</div>';
+  try{
+    const res = await fetch(SB_URL+'/functions/v1/place-lookup', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+SB_ANON, 'Content-Type':'application/json' },
+      body: JSON.stringify({ query:q })
+    });
+    const j = await res.json();
+    const cands = (j.candidates||[]);
+    if(!res.ok || !cands.length){
+      box.innerHTML = '<div class="dg-cand-hint">검색 결과가 없어요 — 가게 이름 그대로 신청하셔도 됩니다 (저희가 찾아드려요)</div>';
+      return;
+    }
+    window._cands = cands;
+    box.innerHTML = '<div class="dg-cand-hint">아래에서 <b>내 가게</b>를 선택하세요</div>'
+      + cands.map((c,i)=>`<div class="dg-cand" onclick="pickPlace(${i})">
+          <b>${escH(c.name)}</b><span>${escH(c.road_address||c.address)}${c.biztype?' · '+escH(c.biztype):''}</span>
+        </div>`).join('');
+  }catch(_){
+    box.innerHTML = '<div class="dg-cand-hint">검색이 잠시 안 돼요 — 이름 그대로 신청하셔도 됩니다</div>';
+  }
+}
+function pickPlace(i){
+  const c = window._cands[i];
+  pickedPlace = c;
+  document.getElementById('dg_shop').value = c.name;
+  if(c.region) document.getElementById('dg_region').value = c.region;
+  if(c.biztype) document.getElementById('dg_biztype').value = c.biztype;
+  document.getElementById('dg_cands').style.display='none';
+  const pk = document.getElementById('dg_picked');
+  pk.style.display='block';
+  pk.innerHTML = `<div class="dg-pick">✓ <b>${escH(c.name)}</b> — ${escH(c.road_address||c.address)}
+    <a onclick="clearPick()">다시 선택</a></div>`;
+}
+function clearPick(){
+  pickedPlace = null;
+  document.getElementById('dg_picked').style.display='none';
+  findPlace();
+}
+
 async function sendDiag(e){
   e.preventDefault();
   const btn = document.getElementById('dg_btn');
@@ -272,7 +340,10 @@ async function sendDiag(e){
         p_region: document.getElementById('dg_region').value.trim() || null,
         p_biztype: document.getElementById('dg_biztype').value.trim() || null,
         p_contact: contact,
-        p_memo: null
+        p_memo: null,
+        p_road_address: pickedPlace ? (pickedPlace.road_address || pickedPlace.address) : null,
+        p_lon: pickedPlace ? pickedPlace.lon : null,
+        p_lat: pickedPlace ? pickedPlace.lat : null
       })
     });
     if(!res.ok){
