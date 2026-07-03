@@ -30,12 +30,15 @@
   .tool.on .soon{display:none;}
   .tool.new .ic{filter:none;}
   .tag-new{font-size:9px; font-weight:800; color:var(--green); background:var(--tint); padding:1px 6px; border-radius:10px; margin-left:auto;}
+  .tag-gold{font-size:9px; font-weight:800; color:#9a6b00; background:#fdf3dd; padding:1px 6px; border-radius:10px; margin-left:auto;}
+  .tool.on .tag-gold{background:rgba(255,255,255,.25); color:#fff;}
   .tool.on .tag-new{background:rgba(255,255,255,.25); color:#fff;}
 
   /* 메인 */
   .main{padding:28px 32px 60px; overflow-y:auto; max-width:1100px;}
   .head h1{font-size:24px; font-weight:800; letter-spacing:-.02em;}
-  .head p{color:var(--soft); margin-top:6px; font-size:14.5px;}
+  .head h1::after{content:''; display:block; width:34px; height:4px; border-radius:2px; background:var(--green); margin-top:9px;}
+  .head p{color:#4b5563; margin-top:10px; font-size:14.5px;}
   .diff{display:inline-block; margin-top:10px; font-size:12.5px; font-weight:700; color:var(--green);
     background:var(--tint); padding:5px 12px; border-radius:20px;}
 
@@ -43,9 +46,11 @@
   @media(max-width:900px){ .work{grid-template-columns:1fr;} }
   .panel{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px;
     box-shadow:0 1px 3px rgba(17,24,39,.04);}
-  .panel h3{font-size:15px; font-weight:800; margin-bottom:4px;}
+  .panel h3{font-size:15px; font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:8px;}
+  .panel h3::before{content:''; width:4px; height:15px; border-radius:2px; background:var(--green);}
   .panel .sub{font-size:12.5px; color:var(--soft); margin-bottom:16px;}
-  label{display:block; font-size:12.5px; font-weight:700; margin:14px 0 6px;}
+  label{display:block; font-size:13px; font-weight:800; color:var(--ink); margin:15px 0 6px;}
+  label .lsub{font-weight:500; color:var(--soft); font-size:12px; margin-left:4px;}
   input,textarea{width:100%; border:1px solid var(--line); border-radius:10px; padding:11px 12px;
     font-size:14px; font-family:inherit; outline:none; transition:.15s;}
   input:focus,textarea:focus{border-color:var(--green); box-shadow:0 0 0 3px var(--tint);}
@@ -58,7 +63,8 @@
   .result{background:var(--card); border:1px solid var(--line); border-radius:16px; min-height:300px;
     box-shadow:0 1px 3px rgba(17,24,39,.04); overflow:hidden;}
   .rbar{display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-bottom:1px solid var(--line);}
-  .rbar .t{font-size:13px; font-weight:700; color:var(--soft);}
+  .rbar .t{font-size:13px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:8px;}
+  .rbar .t::before{content:''; width:4px; height:13px; border-radius:2px; background:var(--green);}
   .rbar .act{display:flex; gap:8px;}
   .rbar button{border:1px solid var(--line); background:#fff; border-radius:8px; padding:6px 12px;
     font-size:12.5px; font-weight:700; cursor:pointer;}
@@ -266,7 +272,7 @@ function renderTools(){
     const items = TOOLS.filter(t=>t.cat===cat).map(t=>
       `<div class="tool ${t.id===cur.id?'on':''}" onclick="${t.soon?'':`selectTool('${t.id}')`}" ${t.soon?'data-soon':''}>
         ${t.name}
-        ${t.soon?'<span class="soon">준비중</span>':(t.flag?'<span class="tag-new">추천</span>':(t.ours?'<span class="tag-new">우리만</span>':''))}
+        ${t.soon?'<span class="soon">준비중</span>':(t.flag?'<span class="tag-gold">추천</span>':(t.ours?'<span class="tag-new">우리만</span>':''))}
       </div>`).join('');
     return `<div class="cat">${cat}</div>${items}`;
   }).join('');
@@ -281,8 +287,9 @@ function selectTool(id){
   document.getElementById('rContent').innerHTML='<div class="empty">왼쪽에서 입력하고 <b>'+(kw?'검색량 조회':'글 생성')+'</b>를 눌러보세요</div>';
 }
 function renderFields(){
+  const lab = s => s.replace(/\s*(\([^)]*\))/g, ' <span class="lsub">$1</span>');
   document.getElementById('fields').innerHTML = (cur.fields||[]).map(f=>
-    `<label>${f.l}</label>${f.big?`<textarea id="f_${f.k}" placeholder="${f.ph}"></textarea>`:`<input id="f_${f.k}" placeholder="${f.ph}">`}`
+    `<label>${lab(f.l)}</label>${f.big?`<textarea id="f_${f.k}" placeholder="${f.ph}"></textarea>`:`<input id="f_${f.k}" placeholder="${f.ph}">`}`
     + (f.k==='target_keyword' ? `<div id="kpChips" style="display:none;margin:-4px 0 10px"></div>` : '')
   ).join('');
   // 토큰을 붙여넣으면 keyword-plan 추천 칩 표시 (target_keyword 필드가 있는 툴만)
