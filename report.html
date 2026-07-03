@@ -128,6 +128,13 @@
   .ai-pri{flex:none; font-size:11px; font-weight:800; padding:3px 9px; border-radius:99px; margin-top:1px;}
   .ai-pri.p1{background:#fde8e4; color:#c0392b;} .ai-pri.p2{background:#fdf3dd; color:#9a6b00;} .ai-pri.p3{background:#eef3f0; color:#5b6a62;}
   .ai-next{font-size:13.5px; line-height:1.7; color:#3d4a43;}
+  /* 플레이스 종합 점수 */
+  .pscore{display:flex; align-items:center; gap:16px; margin:4px 0 14px; padding:14px 18px;
+    background:linear-gradient(135deg,#123d2e,#1c5a44); border-radius:14px; color:#fff;}
+  .pscore-n{font-size:38px; font-weight:800; line-height:1; color:#f3cf7a;}
+  .pscore-n small{font-size:16px; font-weight:700; color:#e8ddc0; margin-left:2px;}
+  .pscore-t b{display:block; font-size:14px; margin-bottom:4px;}
+  .pscore-t span{font-size:11.5px; color:#bcd3c8; line-height:1.55; display:block;}
   .proof-verify{display:block; margin-top:12px; font-size:12.5px; font-weight:700; color:var(--primary);
     text-decoration:none; border:1px solid var(--border); border-radius:10px; padding:10px 12px; text-align:center;
     transition:background .13s,border-color .13s;}
@@ -529,12 +536,32 @@ function diagnosisPanel(profiles){
   const rxH = rx.length? rx.map((t,i)=>`<div class="rx"><span class="rx-n num">${i+1}</span>${esc(t)}</div>`).join('')
                        : '<div class="dg-empty">지금 아주 잘 하고 있어요 👍 이 페이스를 유지하세요.</div>';
   const badge=`네이버 플레이스 실측 · ${esc((ours.checked_on||'').replace(/-/g,'.'))} · 상위 ${comps.length}개 업체 평균과 비교`;
+  // ── 플레이스 종합 점수 (투명 공식 — '지수' 아님, 전 항목 실측) ──
+  // 수치 4지표: 경쟁 평균과 같으면 그 지표 만점의 50%, 평균의 2배면 만점. + 세팅 4항목 각 5점.
+  let score=0, maxScore=0;
+  const SW=[['visitor_reviews',25],['blog_reviews',25],['reply_rate',15],['reviews_per_week',15]];
+  SW.forEach(([k,w])=>{
+    const c=avg(comps.map(x=>x[k]));
+    if(ours[k]==null||c==null||!c) return;
+    maxScore+=w; score+=w*Math.min(ours[k]/(2*c),1);
+  });
+  maxScore+=20;
+  if(ours.has_booking) score+=5;
+  if(ours.has_talk) score+=5;
+  if((ours.rep_keywords||[]).length) score+=5;
+  if((ours.photos||0)>=10) score+=5;
+  const score100 = maxScore? Math.round(score/maxScore*100) : null;
+  const scoreH = score100==null ? '' :
+    `<div class="pscore"><div class="pscore-n num">${score100}<small>점</small></div>
+      <div class="pscore-t"><b>플레이스 종합 점수</b>
+        <span>경쟁 상위 평균과 같으면 50점 · 2배면 100점 — 리뷰·답변·유입·세팅 전 항목 실측 합산 (추정 지수 아님)</span></div></div>`;
   return `<div class="panel diag">
     <div class="diag-head">
       <div><h3>경쟁 진단 · 우리 vs 상위 경쟁사</h3>
         <div class="psub">뒤처지는 지표부터 · 아래 처방으로 연결됩니다</div></div>
       <div class="msr-badge">${badge}</div>
     </div>
+    ${scoreH}
     <div class="cmp-legend"><span><span class="ck ours"></span>우리</span><span><span class="ck comp"></span>경쟁 상위 평균</span></div>
     <div class="cmp-list">${rows.map(r=>r.html).join('')}</div>
     <div class="rx-wrap"><div class="dg-h">이번 달 처방 (할 일)</div>${rxH}</div>
