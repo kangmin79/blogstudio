@@ -114,6 +114,20 @@
   .kp-why{font-size:12px; color:#5b6a62;}
   .kp-note{margin-top:11px; font-size:12.5px; color:#5b6a62; background:#fbf8f1; border:1px solid #efe6d2; border-radius:10px; padding:10px 13px; line-height:1.65;}
   .kp-note b{color:#9a6b00;}
+  /* AI 월간 분석 */
+  .ai-panel{border-top:3px solid var(--gold);}
+  .ai-sum{font-size:14.5px; line-height:1.75; color:#2c3a33; background:#f7f4ec; border:1px solid #ece4d0;
+    border-radius:12px; padding:14px 16px; margin:12px 0 4px;}
+  .ai-sec{font-size:12px; font-weight:800; color:var(--primary); letter-spacing:.04em; margin:16px 0 8px;}
+  .ai-list{margin:0; padding-left:18px;}
+  .ai-list li{font-size:13.5px; line-height:1.7; color:#3d4a43; margin-bottom:5px;}
+  .ai-act{display:flex; gap:10px; align-items:flex-start; padding:10px 12px; border:1px solid var(--border);
+    border-radius:11px; margin-bottom:8px; background:#fff;}
+  .ai-act b{font-size:13.5px;}
+  .ai-why{font-size:12.5px; color:#5b6a62; margin-top:3px; line-height:1.6;}
+  .ai-pri{flex:none; font-size:11px; font-weight:800; padding:3px 9px; border-radius:99px; margin-top:1px;}
+  .ai-pri.p1{background:#fde8e4; color:#c0392b;} .ai-pri.p2{background:#fdf3dd; color:#9a6b00;} .ai-pri.p3{background:#eef3f0; color:#5b6a62;}
+  .ai-next{font-size:13.5px; line-height:1.7; color:#3d4a43;}
   .proof-verify{display:block; margin-top:12px; font-size:12.5px; font-weight:700; color:var(--primary);
     text-decoration:none; border:1px solid var(--border); border-radius:10px; padding:10px 12px; text-align:center;
     transition:background .13s,border-color .13s;}
@@ -304,7 +318,7 @@ async function load(){
     const data=await res.json();
     if(!res.ok || !data){ showErr('리포트를 찾을 수 없습니다','링크가 만료되었거나 잘못되었습니다.'); return; }
     render(data);
-    // 키워드 플랜이 아직 없으면 백그라운드에서 1회 생성 → 생기면 다시 그림 (self-healing)
+    // 키워드 플랜·AI 분석이 아직 없으면 백그라운드에서 1회 생성 → 생기면 다시 그림 (self-healing)
     if(data.place && !data.place.keyword_plan){
       try{
         const kp=await fetch(SB+'/functions/v1/keyword-plan',{method:'POST',
@@ -313,6 +327,15 @@ async function load(){
         const kj=await kp.json();
         if(kp.ok && kj.plan){ data.place.keyword_plan=kj.plan; render(data); }
       }catch(_){/* 플랜 없이도 리포트는 정상 */}
+    }
+    if(data.place && !data.place.ai_insight){
+      try{
+        const ai=await fetch(SB+'/functions/v1/report-insight',{method:'POST',
+          headers:{'Authorization':'Bearer '+ANON,'Content-Type':'application/json'},
+          body:JSON.stringify({place_token:token})});
+        const aj=await ai.json();
+        if(ai.ok && aj.insight){ data.place.ai_insight=aj.insight; render(data); }
+      }catch(_){/* 분석 없이도 리포트는 정상 */}
     }
   }catch(e){ showErr('불러오기 오류', e.message); }
 }
@@ -413,6 +436,23 @@ function repKwPanel(profiles){
   return `<div class="panel"><h3>대표키워드 전략 비교</h3>
     <div class="psub">각 업체가 스마트플레이스에 직접 세팅한 검색 키워드 · <b>금색 칩 = 2곳 이상 공통(시장 필수 키워드)</b> · 나머지 = 그 업체의 차별화 키워드</div>
     ${rows}</div>`;
+}
+
+// AI 월간 분석 — Claude가 실측 데이터를 종합 해석한 컨설팅 보고서 (report-insight)
+function aiInsightPanel(ai){
+  if(!ai || !ai.summary) return '';
+  const dt=(ai.generated_at||'').slice(0,10).replace(/-/g,'.');
+  const pri=p=>`<span class="ai-pri p${p}">${p===1?'급함':p===2?'권장':'여유'}</span>`;
+  const findings=(ai.findings||[]).map(f=>`<li>${esc(f)}</li>`).join('');
+  const actions=(ai.actions||[]).slice().sort((a,b)=>a.priority-b.priority).map(a=>
+    `<div class="ai-act">${pri(a.priority)}<div><b>${esc(a.title)}</b><div class="ai-why">${esc(a.why)}</div></div></div>`).join('');
+  return `<div class="panel ai-panel"><h3>AI 월간 분석</h3>
+    <div class="psub">측정된 순위·경쟁사·키워드 데이터를 AI가 종합 해석 · ${dt} 기준 · <b>실측 수치만 인용(창작 없음)</b></div>
+    <div class="ai-sum">${esc(ai.summary)}</div>
+    ${findings?`<div class="ai-sec">이번 기간 핵심 발견</div><ul class="ai-list">${findings}</ul>`:''}
+    ${actions?`<div class="ai-sec">처방 — 우선순위 순</div>${actions}`:''}
+    ${ai.next_month?`<div class="ai-sec">다음 달 방향</div><div class="ai-next">${esc(ai.next_month)}</div>`:''}
+  </div>`;
 }
 
 // 추천 키워드 플랜 — keyword-plan 엔진(검색광고 실측 채점)이 뽑은 공략 키워드
@@ -683,6 +723,10 @@ function render(d){
   // 추천 키워드 플랜 (전체 폭) — "우리가 적절한 키워드를 추출해 원고를 배정"
   const kplan=keywordPlanPanel(p.keyword_plan);
   if(kplan) h+=`<div style="margin-top:16px">${kplan}</div>`;
+
+  // AI 월간 분석 (전체 폭)
+  const ains=aiInsightPanel(p.ai_insight);
+  if(ains) h+=`<div style="margin-top:16px">${ains}</div>`;
 
   // 키워드별 경쟁 현황 (2단 카드)
   if(kws.length){
