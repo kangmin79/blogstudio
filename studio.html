@@ -213,9 +213,6 @@ const TOOLS = [
       {k:'target_keyword', l:'🎯 타겟 키워드 (선택) — 이 글이 노릴 검색어 하나', ph:'예: 송도 강아지 유치원'},
       {k:'must', l:'꼭 넣을 내용 (선택)', ph:'예: 산책 시간, 수분 섭취', big:true},
     ]},
-  { id:'visit_review', cat:'블로그 생성', ic:'⭐', name:'방문후기', soon:true },
-  { id:'travel', cat:'블로그 생성', ic:'✈️', name:'여행후기', soon:true },
-
   // ── ⭐ 플레이스 관리 (가제트엔 없는 우리만의 레버) ──
   { id:'place_intro', cat:'⭐ 플레이스 관리', ic:'💬', name:'플레이스 소개글', ours:true, req:['name'],
     desc:'문제제기→해결→신뢰→행동유도 구조로 예약·전화를 부르는 플레이스 소개글을 써요. (2026 순위 요인)',
@@ -256,14 +253,8 @@ const TOOLS = [
   { id:'kw_volume', cat:'키워드', ic:'🔑', name:'키워드 검색량', ours:true, req:['keywords'], kind:'keyword',
     desc:'네이버 실제 월간 검색량과 경쟁도를 조회해요. 관련 추천 키워드도 함께 (검색광고 데이터).',
     fields:[ {k:'keywords', l:'키워드 (쉼표로 구분, 최대 5개)', ph:'예: 송도치과, 송도임플란트, 송도치아교정', big:true} ] },
-  { id:'smartblock', cat:'키워드', ic:'🧩', name:'스마트블록', soon:true },
-  { id:'ai_image', cat:'이미지', ic:'🖼️', name:'AI 이미지 생성', soon:true },
-  { id:'image_edit', cat:'이미지', ic:'✂️', name:'이미지 편집', soon:true },
-
-  // ── 발행·리포트 (우리만, 준비중) ──
-  { id:'publish', cat:'⭐ 발행·리포트', ic:'🚀', name:'네이버 발행', ours:true, soon:true },
-  { id:'rank_report', cat:'⭐ 발행·리포트', ic:'📊', name:'순위 리포트', ours:true, soon:true },
-  { id:'bulk', cat:'⭐ 발행·리포트', ic:'📦', name:'대량 생성', soon:true },
+  // 준비중 항목은 목록에서 뺀다 (2026-07-04 결정): 되는 것만 보여주는 게 신뢰.
+  // 기능이 실제로 생기면 그때 추가 (방문후기·여행후기·스마트블록·AI이미지·이미지편집·네이버발행·순위리포트·대량생성)
 ];
 
 let cur = TOOLS[0];
