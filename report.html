@@ -98,6 +98,9 @@
   .phone img{display:block; width:100%; height:auto;}
   .phone-hint{position:sticky; bottom:0; left:0; right:0; text-align:center; font-size:10.5px; color:#fff;
     background:linear-gradient(transparent, rgba(18,61,46,.78)); padding:16px 0 7px; pointer-events:none;}
+  .phone-adwarn{position:sticky; top:0; left:0; right:0; z-index:2; text-align:center; font-size:11px; font-weight:700;
+    color:#7a5a12; background:rgba(255,246,220,.96); border-bottom:1px solid #eadcae; padding:6px 8px;}
+  .phone-adwarn b{color:#9a6b00;}
   .proof-verify{display:block; margin-top:12px; font-size:12.5px; font-weight:700; color:var(--primary);
     text-decoration:none; border:1px solid var(--border); border-radius:10px; padding:10px 12px; text-align:center;
     transition:background .13s,border-color .13s;}
@@ -520,12 +523,17 @@ function searchProofSection(place, groups, kws, profiles){
     const visitOf=(e)=>{ if(e.visitor_reviews!=null) return Number(e.visitor_reviews);
       const pr=lookupProf(e.name); return pr&&pr.visitor_reviews!=null?Number(pr.visitor_reviews):null; };
     const maxBlog=Math.max(1, ...list.filter(e=>!e.ad).map(e=>blogOf(e)||0));
+    // 같은 가게가 광고+오가닉 두 번 등장하는 혼동 방지: 광고행에 실제 순위를 병기
+    const organicRank={};
+    list.filter(e=>!e.ad).forEach(e=>{ const k=_nkey(e.name); if(organicRank[k]==null) organicRank[k]=e.rank; });
+    const adCount=list.filter(e=>e.ad).length;
     let organicStarted=false;
     const rows=list.map(e=>{
       if(e.ad){
+        const realRk=organicRank[_nkey(e.name)];
         return `<li class="ad"><span class="pd-r ad">AD</span>
           <span class="pd-nm">${esc(e.name)}<span class="pd-adtag">광고</span></span>
-          <span class="pd-adnote">광고 자리</span></li>`;
+          <span class="pd-adnote">${realRk?`광고비로 상단 노출 · 실제 ${realRk}위`:'광고 자리'}</span></li>`;
       }
       let divider='';
       if(useScreen && !organicStarted){ organicStarted=true; divider=`<li class="pd-divider">↓ 광고 아래 · 실제(오가닉) 순위</li>`; }
@@ -551,8 +559,8 @@ function searchProofSection(place, groups, kws, profiles){
         <div class="proof-kw"><span class="mag">🔍</span>${esc(kw)}</div>
         <div class="proof-basis">${basis}</div></div>${rankHtml}</div>
       <div class="proof-body">
-        <div class="phone"><img src="${esc(shot.screenshot_url)}" alt="네이버 '${esc(kw)}' 검색 화면" loading="lazy">
-          <div class="phone-hint">스크롤하면 순위 목록이 보입니다</div></div>
+        <div class="phone">${adCount?`<div class="phone-adwarn">⚠️ 화면 맨 위 <b>${adCount}개</b>는 '광고ⓘ' — 실제 순위는 그 아래부터</div>`:''}<img src="${esc(shot.screenshot_url)}" alt="네이버 '${esc(kw)}' 검색 화면" loading="lazy">
+          <div class="phone-hint">${adCount?`위 ${adCount}개는 광고 · 스크롤하면 실제 순위가 보입니다`:'스크롤하면 순위 목록이 보입니다'}</div></div>
         ${dataPanel}
       </div>
       <div class="proof-note">※ 화면 맨 위 <b>'광고ⓘ'</b> 표시 항목은 광고 자리입니다. 오른쪽 순위표는 광고를 뺀 <b>실제(오가닉) 순위</b>이며, <b>가게 위치 기준</b>으로 저희가 직접 측정했습니다. 네이버 결과는 보는 위치·시점에 따라 조금씩 달라질 수 있습니다.</div>
