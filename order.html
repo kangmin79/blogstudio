@@ -384,7 +384,14 @@ async function showApp(user){
   if(back === 'studio.html'){ sessionStorage.removeItem('bs_back'); location.replace('studio.html'); return; }
   document.getElementById('loginGate').style.display='none';
   document.getElementById('app').style.display='block';
-  const { data } = await sb.from('profiles').select('nickname, point_balance').eq('id', user.id).single();
+  const { data, error } = await sb.from('profiles').select('nickname, point_balance').eq('id', user.id).single();
+  if(error){
+    console.error('프로필 조회 실패:', error);
+    document.getElementById('userName').textContent = (data?.nickname || '회원') + '님';
+    document.getElementById('userPts').textContent = '—';
+    const sp0 = document.getElementById('sidePts'); if(sp0) sp0.textContent = '—';
+    return;
+  }
   document.getElementById('userName').textContent = (data?.nickname || '회원') + '님';
   document.getElementById('userPts').textContent = (data?.point_balance ?? 0) + 'P';
   const sp = document.getElementById('sidePts'); if(sp) sp.textContent = (data?.point_balance ?? 0);
@@ -544,6 +551,13 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
     const npw = document.getElementById('naver_pw').value;
     if(!nid || !npw){ alert('내 블로그 대행은 네이버 계정 파일(아이디/비번)을 올려주세요.'); return; }
   }
+  // 원고 내용 검증: AI 작성은 주제, 내가 작성은 원고 필수
+  if(order.copy==='ai' && !document.getElementById('copy_topic').value.trim()){
+    alert('AI 작성은 원하는 글의 주제·키워드를 입력해 주세요.'); return;
+  }
+  if(order.copy==='customer' && !document.getElementById('copy_text').value.trim()){
+    alert('내가 작성을 선택하셨어요. 원고를 붙여넣어 주세요.'); return;
+  }
   const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='처리 중...';
   const { data, error } = await sb.rpc('place_order', {
     p_target: order.target,
@@ -568,7 +582,7 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
   alert('주문 완료! 접수되었습니다.\n주문번호: '+data);
   const { data:{ user } } = await sb.auth.getUser();
   showApp(user);   // 포인트 갱신
-  btn.textContent='주문하기';
+  btn.textContent='주문하기'; btn.disabled=false;
 });
 </script>
 </body>

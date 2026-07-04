@@ -359,7 +359,7 @@ async function generate(){
 }
 
 let lastBody='';
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function renderResult(j){
   lastBody = [j.title, j.body, j.tags].filter(x=>x&&x.trim()).join('\n\n');
   let html = '';

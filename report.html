@@ -308,7 +308,7 @@
 <script>
 const SB='https://enqsuymbsugrkmstewek.supabase.co';
 const ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVucXN1eW1ic3Vncmttc3Rld2VrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDg1MzQsImV4cCI6MjA5ODQyNDUzNH0.LsVx4Eob26nBQ_sD_VjFoSXPgIQcTTaNSql48gdvgLM';
-const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const token=new URLSearchParams(location.search).get('t');
 const fmtN=n=>Number(n||0).toLocaleString('ko-KR');
 const mdShort=d=>{const p=d.split('-'); return `${+p[1]}.${+p[2]}`;};
@@ -777,6 +777,7 @@ function render(d){
 
 function drawTrend(kws, groups, dates){
   const ctx=document.getElementById('trend'); if(!ctx||!window.Chart) return;
+  if(chartRef){ chartRef.destroy(); chartRef=null; }   // 재렌더 시 이전 인스턴스·리스너 파기
   const datasets=kws.map((kw,i)=>{
     const c=PALETTE[i%PALETTE.length];
     const byDate={}; groups[kw].forEach(r=>byDate[r.checked_on]=r.rank);

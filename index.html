@@ -275,7 +275,7 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 
 // ── 내 가게 찾기: 동명 가게 특정 (후보 목록 → 선택 → 주소·좌표·업종 자동) ──
 let pickedPlace = null;
-function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 async function findPlace(){
   const q = document.getElementById('dg_shop').value.trim();
   const box = document.getElementById('dg_cands');
