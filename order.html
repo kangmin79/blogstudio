@@ -229,8 +229,8 @@
     <div class="reveal" id="rv-copy-ai">
       <label class="fld">어떤 글을 원하세요? (주제·키워드)</label>
       <textarea id="copy_topic" placeholder="예: 우리 가게 신메뉴 소개 / 마포 맛집 / 분위기 좋은 카페"></textarea>
-      <label class="fld">꼭 넣고 싶은 내용 (선택)</label>
-      <input type="text" id="copy_must" placeholder="예: 주차 가능, 예약 필수, 단체 환영">
+      <label class="fld">꼭 넣고 싶은 내용·강조점 (선택)</label>
+      <textarea id="copy_must" placeholder="꼭 들어갔으면 하는 내용이나 강조하고 싶은 점을 적어주세요.&#10;직접 쓰신 문장 몇 줄을 넣어도 좋아요 — AI가 자연스럽게 녹여드립니다.&#10;예: 이번 달 임플란트 상담 무료 / '20년 경력 원장 직접 진료' 문구 꼭 넣기"></textarea>
     </div>
     <div class="reveal" id="rv-copy-customer">
       <label class="fld">원고를 붙여넣어 주세요</label>
@@ -558,7 +558,32 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
   if(order.copy==='customer' && !document.getElementById('copy_text').value.trim()){
     alert('내가 작성을 선택하셨어요. 원고를 붙여넣어 주세요.'); return;
   }
+  const photoFiles = document.getElementById('photo_files').files;
+  if(order.image==='customer' && !photoFiles.length){
+    alert('내 사진 사용을 선택하셨어요. 사진을 1장 이상 올려주세요. (없으면 "AI가 생성"을 선택)'); return;
+  }
   const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='처리 중...';
+
+  // 업주 사진 업로드 → Storage(order-photos/본인폴더) → 공개 URL 배열 (우선순위 ① 소스)
+  let photoUrls = null;
+  if(order.image==='customer' && photoFiles.length){
+    btn.textContent='사진 올리는 중...';
+    const { data:{ user } } = await sb.auth.getUser();
+    if(!user){ alert('로그인이 필요합니다.'); btn.disabled=false; btn.textContent='주문하기'; return; }
+    photoUrls = [];
+    const stamp = Date.now();
+    for(let i=0;i<photoFiles.length;i++){
+      const f = photoFiles[i];
+      const ext = ((f.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')) || 'jpg';
+      const path = `${user.id}/${stamp}_${i+1}.${ext}`;
+      const { error: upErr } = await sb.storage.from('order-photos')
+        .upload(path, f, { upsert:false, contentType: f.type||'image/jpeg' });
+      if(upErr){ alert('사진 업로드 실패: '+upErr.message); btn.disabled=false; btn.textContent='주문하기'; return; }
+      photoUrls.push(sb.storage.from('order-photos').getPublicUrl(path).data.publicUrl);
+    }
+  }
+  btn.textContent='처리 중...';
+
   const { data, error } = await sb.rpc('place_order', {
     p_target: order.target,
     p_naver_id: document.getElementById('naver_id').value || null,
@@ -577,6 +602,7 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
     } : null,
     p_points: currentPoints,
     p_place_token: sessionStorage.getItem('bs_place_token') || null,
+    p_photos: photoUrls,
   });
   if(error){ alert('주문 실패: '+error.message); btn.disabled=false; btn.textContent='주문하기'; return; }
   alert('주문 완료! 접수되었습니다.\n주문번호: '+data);
