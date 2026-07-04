@@ -544,6 +544,24 @@ function updatePrice(){
   let p=10; if(order.copy==='ai') p+=15; if(order.image==='ai') p+=5;
   currentPoints=p; pe.textContent=p+'P'; btn.disabled=false;
 }
+// 파일명에서 안전하게 확장자 추출 (점 없는 이름·이상한 이름은 jpg 폴백)
+function safeExt(name){
+  const m = /\.([a-z0-9]{1,5})$/i.exec(name || '');
+  return m ? m[1].toLowerCase() : 'jpg';
+}
+// 주문 성공 후 폼 초기화 (다음 주문에 이전 선택·사진이 새어들지 않게)
+function resetOrderForm(){
+  order.target = order.copy = order.image = order.promo = null;
+  document.querySelectorAll('.choice.on').forEach(c=>c.classList.remove('on'));
+  document.querySelectorAll('.reveal.show').forEach(r=>r.classList.remove('show'));
+  ['copy_topic','copy_must','copy_text','shop_name','shop_addr','shop_tel','shop_hours','naver_id','naver_pw']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const pf=document.getElementById('photo_files'); if(pf) pf.value='';
+  document.getElementById('photo_count').textContent='';
+  const lbl=document.getElementById('acctLabel'); if(lbl) lbl.textContent='클릭해서 계정 txt 파일 선택';
+  const info=document.getElementById('acctInfo');
+  if(info) info.innerHTML='🔒 <b>아이디/비밀번호</b> 형식의 txt 파일. 대행 발행 용도로만 사용됩니다.';
+}
 document.getElementById('submitBtn').addEventListener('click', async ()=>{
   // 손님 블로그면 아이디/비번 필수
   if(order.target==='customer'){
@@ -562,53 +580,67 @@ document.getElementById('submitBtn').addEventListener('click', async ()=>{
   if(order.image==='customer' && !photoFiles.length){
     alert('내 사진 사용을 선택하셨어요. 사진을 1장 이상 올려주세요. (없으면 "AI가 생성"을 선택)'); return;
   }
+
   const btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='처리 중...';
-
-  // 업주 사진 업로드 → Storage(order-photos/본인폴더) → 공개 URL 배열 (우선순위 ① 소스)
-  let photoUrls = null;
-  if(order.image==='customer' && photoFiles.length){
-    btn.textContent='사진 올리는 중...';
-    const { data:{ user } } = await sb.auth.getUser();
-    if(!user){ alert('로그인이 필요합니다.'); btn.disabled=false; btn.textContent='주문하기'; return; }
-    photoUrls = [];
-    const stamp = Date.now();
-    for(let i=0;i<photoFiles.length;i++){
-      const f = photoFiles[i];
-      const ext = ((f.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')) || 'jpg';
-      const path = `${user.id}/${stamp}_${i+1}.${ext}`;
-      const { error: upErr } = await sb.storage.from('order-photos')
-        .upload(path, f, { upsert:false, contentType: f.type||'image/jpeg' });
-      if(upErr){ alert('사진 업로드 실패: '+upErr.message); btn.disabled=false; btn.textContent='주문하기'; return; }
-      photoUrls.push(sb.storage.from('order-photos').getPublicUrl(path).data.publicUrl);
+  const bucket = sb.storage.from('order-photos');
+  let uploadedPaths = [];      // 실패 시 정리(orphan 방지)용
+  try {
+    // 업주 사진 업로드 → Storage(order-photos/본인폴더) → 공개 URL 배열 (우선순위 ① 소스)
+    let photoUrls = null;
+    if(order.image==='customer' && photoFiles.length){
+      btn.textContent='사진 올리는 중...';
+      const { data:{ user } } = await sb.auth.getUser();
+      if(!user) throw new Error('로그인이 필요합니다.');
+      const stamp = Date.now();
+      const files = Array.from(photoFiles);
+      // 동시 업로드(순차 대기 제거). 하나라도 실패하면 성공분은 아래 catch에서 정리.
+      const settled = await Promise.allSettled(files.map(async (f,i)=>{
+        const path = `${user.id}/${stamp}_${i+1}.${safeExt(f.name)}`;
+        const { error: upErr } = await bucket.upload(path, f, { upsert:false, contentType: f.type||'image/jpeg' });
+        if(upErr) throw new Error(upErr.message);
+        return path;
+      }));
+      uploadedPaths = settled.filter(s=>s.status==='fulfilled').map(s=>s.value);
+      const failed = settled.find(s=>s.status==='rejected');
+      if(failed) throw new Error('사진 업로드 실패: '+((failed.reason&&failed.reason.message)||failed.reason));
+      photoUrls = uploadedPaths.map(p=>bucket.getPublicUrl(p).data.publicUrl);
     }
-  }
-  btn.textContent='처리 중...';
+    btn.textContent='처리 중...';
 
-  const { data, error } = await sb.rpc('place_order', {
-    p_target: order.target,
-    p_naver_id: document.getElementById('naver_id').value || null,
-    p_naver_pw: document.getElementById('naver_pw').value || null,
-    p_copy_mode: order.copy,
-    p_copy_topic: document.getElementById('copy_topic').value || null,
-    p_copy_must: document.getElementById('copy_must').value || null,
-    p_copy_text: document.getElementById('copy_text').value || null,
-    p_image_mode: order.image,
-    p_promo: order.promo==='yes',
-    p_shop: order.promo==='yes' ? {
-      name: document.getElementById('shop_name').value,
-      addr: document.getElementById('shop_addr').value,
-      tel: document.getElementById('shop_tel').value,
-      hours: document.getElementById('shop_hours').value,
-    } : null,
-    p_points: currentPoints,
-    p_place_token: sessionStorage.getItem('bs_place_token') || null,
-    p_photos: photoUrls,
-  });
-  if(error){ alert('주문 실패: '+error.message); btn.disabled=false; btn.textContent='주문하기'; return; }
-  alert('주문 완료! 접수되었습니다.\n주문번호: '+data);
-  const { data:{ user } } = await sb.auth.getUser();
-  showApp(user);   // 포인트 갱신
-  btn.textContent='주문하기'; btn.disabled=false;
+    const { data, error } = await sb.rpc('place_order', {
+      p_target: order.target,
+      p_naver_id: document.getElementById('naver_id').value || null,
+      p_naver_pw: document.getElementById('naver_pw').value || null,
+      p_copy_mode: order.copy,
+      p_copy_topic: document.getElementById('copy_topic').value || null,
+      p_copy_must: document.getElementById('copy_must').value || null,
+      p_copy_text: document.getElementById('copy_text').value || null,
+      p_image_mode: order.image,
+      p_promo: order.promo==='yes',
+      p_shop: order.promo==='yes' ? {
+        name: document.getElementById('shop_name').value,
+        addr: document.getElementById('shop_addr').value,
+        tel: document.getElementById('shop_tel').value,
+        hours: document.getElementById('shop_hours').value,
+      } : null,
+      p_points: currentPoints,
+      p_place_token: sessionStorage.getItem('bs_place_token') || null,
+      p_photos: photoUrls,
+    });
+    if(error) throw new Error('주문 실패: '+error.message);
+
+    alert('주문 완료! 접수되었습니다.\n주문번호: '+data);
+    resetOrderForm();
+    const { data:{ user } } = await sb.auth.getUser();
+    showApp(user);   // 포인트 갱신
+  } catch(e){
+    // 업로드는 됐지만 주문에 못 붙은 사진은 정리(orphan 방지)
+    if(uploadedPaths.length){ try{ await bucket.remove(uploadedPaths); }catch(_){} }
+    alert((e && e.message) || '처리 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
+  } finally {
+    btn.textContent='주문하기';
+    updatePrice();   // order 상태 기준 재계산(성공=리셋되어 비활성, 실패=재시도 가능)
+  }
 });
 </script>
 </body>
