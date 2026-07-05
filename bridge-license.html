@@ -21,6 +21,7 @@
   button.ghost { background:#334155; }
   button.danger { background:#dc2626; }
   button.warn { background:#d97706; }
+  button.restore { background:#16a34a; }
   button.sm { padding:6px 10px; font-size:12px; }
   .row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
   .row > div { flex:1; min-width:180px; }
@@ -288,7 +289,10 @@
         '<td>' + fmtExpiry(r.expires_at) + '</td>' +
         '<td>' + fmtDate(r.last_verified_at) + '</td>' +
         '<td>' +
-          (r.status !== 'revoked' ? '<button class="danger sm" onclick="revokeKey(\'' + key + '\')">폐기</button>' : '<span class="muted">-</span>') +
+          (r.status === 'revoked'
+            ? '<button class="restore sm" onclick="restoreKey(\'' + key + '\')">되살리기</button> '
+            : '<button class="danger sm" onclick="revokeKey(\'' + key + '\')">폐기</button> ') +
+          '<button class="ghost sm" onclick="deleteKey(\'' + key + '\')">삭제</button>' +
         '</td>' +
       '</tr>';
     }).join('');
@@ -303,7 +307,13 @@
     catch (e) { setMsg('listMsg', e.message, 'err'); }
   }
   function revokeKey(key) {
-    rowAction('revoke', key, '이 키를 폐기(환불/차단)할까요?\n' + key + '\n\n폐기하면 그 폰에서 다음 확인 때 잠깁니다.');
+    rowAction('revoke', key, '이 키를 폐기(환불/차단)할까요?\n' + key + '\n\n폐기하면 그 폰에서 다음 확인 때 잠깁니다. (나중에 되살리기 가능)');
+  }
+  function restoreKey(key) {
+    rowAction('restore', key, '이 키를 되살릴까요?\n' + key + '\n\n폐기를 취소하고 다시 사용 가능해집니다. (묶였던 폰이 있으면 그 폰에서 다시 작동)');
+  }
+  function deleteKey(key) {
+    rowAction('delete', key, '⚠️ 이 키를 완전히 삭제할까요?\n' + key + '\n\n되돌릴 수 없습니다. 활성 손님이면 그 손님 앱이 잠깁니다.\n(테스트 키·완전 정리용)');
   }
 
   function setMsg(id, text, cls) {
