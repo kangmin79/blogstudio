@@ -14,7 +14,7 @@
   .card { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:18px; margin-bottom:18px; }
   .card h2 { font-size:15px; margin:0 0 12px; color:#f8fafc; }
   label { display:block; font-size:13px; color:#94a3b8; margin:10px 0 4px; }
-  input[type=text], input[type=password], input[type=date] { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#0f172a; color:#e2e8f0; font-size:14px; }
+  input[type=text], input[type=password], input[type=date], input[type=tel], input[type=number] { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#0f172a; color:#e2e8f0; font-size:14px; }
   input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1); }
   button { cursor:pointer; border:none; border-radius:8px; padding:10px 16px; font-size:14px; font-weight:600; color:#fff; background:#6366f1; }
   button:hover { opacity:.9; }
@@ -59,9 +59,19 @@
   <div class="card">
     <h2>➕ 새 키 발급</h2>
     <div class="row">
-      <div>
-        <label>받는 사람 (이름·연락처)</label>
-        <input type="text" id="orderRef" placeholder="예: 홍길동 010-1234-5678">
+      <div style="flex:1 1 220px">
+        <label>받는 분 전화번호 (필수 · 손님 구분 키)</label>
+        <input type="tel" id="phone" placeholder="예: 010-1234-5678" autocomplete="off">
+      </div>
+      <div style="flex:1 1 160px">
+        <label>메모 (선택 · 이름 등)</label>
+        <input type="text" id="memo" placeholder="예: 홍길동" autocomplete="off">
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div style="flex:0 0 90px">
+        <label>개수</label>
+        <input type="number" id="count" value="1" min="1" max="20">
       </div>
       <div style="flex:0 0 200px">
         <label>사용 가능 마지막 날짜 (비우면 영구)</label>
@@ -70,21 +80,22 @@
       <button onclick="issueKey()">키 발급</button>
     </div>
     <div class="newkey" id="newkeyBox">
-      새 키: <code id="newkeyVal"></code>
-      <button class="ghost sm" style="margin-left:10px" onclick="copyKey()">복사</button>
-      <div class="msg muted">이 키를 손님에게 전달하세요. (활성화 시 손님 폰에 바인딩됨)</div>
+      <div style="margin-bottom:8px;font-size:13px;color:#94a3b8">발급된 키 (손님에게 전달 · 활성화 시 손님 폰에 바인딩)</div>
+      <code id="newkeyVal"></code>
+      <button class="ghost sm" style="margin-left:10px" onclick="copyKey()">전체 복사</button>
     </div>
     <div class="msg" id="issueMsg"></div>
   </div>
 
   <div class="card">
     <h2>📋 발급 목록 <button class="ghost sm" style="margin-left:8px" onclick="loadList()">새로고침</button></h2>
+    <input type="text" id="searchBox" placeholder="🔍 전화번호·키·메모로 검색 (같은 손님끼리 묶여서 보임)" oninput="renderRows()" autocomplete="off" style="margin-bottom:12px">
     <div class="tablewrap">
       <table>
         <thead><tr>
-          <th>키</th><th>상태</th><th>기기</th><th>만료</th><th>마지막 확인</th><th>받는 사람</th><th>작업</th>
+          <th>키</th><th>전화번호</th><th>메모</th><th>상태</th><th>기기</th><th>만료</th><th>마지막 확인</th><th>작업</th>
         </tr></thead>
-        <tbody id="listBody"><tr><td colspan="7" class="muted">새로고침을 눌러 불러오세요.</td></tr></tbody>
+        <tbody id="listBody"><tr><td colspan="8" class="muted">새로고침을 눌러 불러오세요.</td></tr></tbody>
       </table>
     </div>
     <div class="msg" id="listMsg"></div>
@@ -96,7 +107,18 @@
   // 게이트웨이 통과용 공개키(Publishable). 공개용이라 여기 있어도 안전.
   const APIKEY = "sb_publishable_tYcexAE3U5jcj07Qe0R8kA_9PxoIJGj";
 
+  let allRows = [];    // 마지막으로 불러온 전체 목록(검색 필터용)
+  let lastIssued = []; // 방금 발급한 키들(전체 복사용)
+
   function token() { return document.getElementById('adminToken').value.trim(); }
+
+  function normPhone(s) { return (s || '').replace(/\D/g, ''); }
+  function fmtPhone(s) {
+    const d = normPhone(s);
+    if (d.length === 11) return d.slice(0,3) + '-' + d.slice(3,7) + '-' + d.slice(7);
+    if (d.length === 10) return d.slice(0,3) + '-' + d.slice(3,6) + '-' + d.slice(6);
+    return s || '';
+  }
 
   async function call(action, extra) {
     const t = token();
@@ -116,25 +138,41 @@
   }
 
   async function issueKey() {
-    setMsg('issueMsg', '발급 중...', '');
+    const phone = normPhone(document.getElementById('phone').value);
+    if (!phone) { setMsg('issueMsg', '받는 분 전화번호를 입력하세요.', 'err'); return; }
+    const memo = document.getElementById('memo').value.trim();
+    const count = Math.max(1, Math.min(20, parseInt(document.getElementById('count').value, 10) || 1));
+    const dateStr = document.getElementById('expiry').value;
+    const expires_at = dateStr ? new Date(dateStr + 'T23:59:59').toISOString() : undefined; // 그날 끝까지 유효
+
+    setMsg('issueMsg', count + '개 발급 중...', '');
+    lastIssued = [];
     try {
-      const extra = { order_ref: document.getElementById('orderRef').value.trim() };
-      const dateStr = document.getElementById('expiry').value;
-      if (dateStr) {
-        // 선택한 날짜의 그날 끝(23:59:59)까지 유효
-        extra.expires_at = new Date(dateStr + 'T23:59:59').toISOString();
+      for (let i = 0; i < count; i++) {
+        const extra = { phone: phone, order_ref: memo };
+        if (expires_at) extra.expires_at = expires_at;
+        const data = await call('issue', extra);
+        lastIssued.push(data.license_key);
       }
-      const data = await call('issue', extra);
-      document.getElementById('newkeyVal').textContent = data.license_key;
+      document.getElementById('newkeyVal').innerHTML = lastIssued.join('<br>');
       document.getElementById('newkeyBox').style.display = 'block';
-      setMsg('issueMsg', '', '');
+      setMsg('issueMsg', lastIssued.length + '개 발급 완료', 'ok');
       loadList();
-    } catch (e) { setMsg('issueMsg', e.message, 'err'); }
+    } catch (e) {
+      // 일부라도 발급됐으면 보여준다
+      if (lastIssued.length) {
+        document.getElementById('newkeyVal').innerHTML = lastIssued.join('<br>');
+        document.getElementById('newkeyBox').style.display = 'block';
+      }
+      setMsg('issueMsg', e.message + (lastIssued.length ? ' (' + lastIssued.length + '개는 발급됨)' : ''), 'err');
+      loadList();
+    }
   }
 
   function copyKey() {
-    const v = document.getElementById('newkeyVal').textContent;
-    navigator.clipboard.writeText(v).then(() => setMsg('issueMsg', '복사됨: ' + v, 'ok'));
+    if (!lastIssued.length) return;
+    navigator.clipboard.writeText(lastIssued.join('\n'))
+      .then(() => setMsg('issueMsg', '복사됨 (' + lastIssued.length + '개)', 'ok'));
   }
 
   function fmtDate(s) {
@@ -159,27 +197,56 @@
     setMsg('listMsg', '불러오는 중...', '');
     try {
       const data = await call('list', {});
-      const rows = data.rows || [];
-      const body = document.getElementById('listBody');
-      if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="muted">아직 발급된 키가 없습니다.</td></tr>'; setMsg('listMsg','',''); return; }
-      body.innerHTML = rows.map(r => {
-        const dev = r.device_id ? '<span class="ok">등록됨</span>' : '<span class="muted">미등록</span>';
-        const key = esc(r.license_key);
-        return '<tr>' +
-          '<td><code>' + key + '</code></td>' +
-          '<td>' + badge(r.status) + '</td>' +
-          '<td>' + dev + '</td>' +
-          '<td>' + fmtExpiry(r.expires_at) + '</td>' +
-          '<td>' + fmtDate(r.last_verified_at) + '</td>' +
-          '<td>' + esc(r.order_ref || r.note || '') + '</td>' +
-          '<td>' +
-            (r.status !== 'revoked' ? '<button class="danger sm" onclick="revokeKey(\'' + key + '\')">폐기</button> ' : '') +
-            '<button class="warn sm" onclick="resetKey(\'' + key + '\')">초기화</button>' +
-          '</td>' +
-        '</tr>';
-      }).join('');
-      setMsg('listMsg', rows.length + '건', 'muted');
+      allRows = data.rows || [];
+      // 같은 전화번호(손님)끼리 묶고, 그 안은 최신 발급순
+      allRows.sort((a, b) => {
+        const pa = normPhone(a.phone), pb = normPhone(b.phone);
+        if (pa !== pb) return pa < pb ? -1 : 1;
+        return (b.created_at || '').localeCompare(a.created_at || '');
+      });
+      renderRows();
     } catch (e) { setMsg('listMsg', e.message, 'err'); }
+  }
+
+  // 검색어로 거른 뒤 표를 그린다(전화번호 숫자 / 키 / 메모 매칭).
+  function renderRows() {
+    const raw = document.getElementById('searchBox').value.trim();
+    const qDigit = normPhone(raw);
+    const qLower = raw.toLowerCase();
+    let rows = allRows;
+    if (raw) {
+      rows = allRows.filter(r =>
+        (qDigit && normPhone(r.phone).includes(qDigit)) ||
+        (r.license_key || '').toLowerCase().includes(qLower) ||
+        (r.order_ref || '').toLowerCase().includes(qLower)
+      );
+    }
+    const body = document.getElementById('listBody');
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="8" class="muted">' +
+        (allRows.length ? '검색 결과가 없습니다.' : '아직 발급된 키가 없습니다.') + '</td></tr>';
+      setMsg('listMsg', '', 'muted');
+      return;
+    }
+    body.innerHTML = rows.map(r => {
+      const dev = r.device_id ? '<span class="ok">등록됨</span>' : '<span class="muted">미등록</span>';
+      const key = esc(r.license_key);
+      return '<tr>' +
+        '<td><code>' + key + '</code></td>' +
+        '<td>' + esc(fmtPhone(r.phone)) + '</td>' +
+        '<td>' + esc(r.order_ref || '') + '</td>' +
+        '<td>' + badge(r.status) + '</td>' +
+        '<td>' + dev + '</td>' +
+        '<td>' + fmtExpiry(r.expires_at) + '</td>' +
+        '<td>' + fmtDate(r.last_verified_at) + '</td>' +
+        '<td>' +
+          (r.status !== 'revoked' ? '<button class="danger sm" onclick="revokeKey(\'' + key + '\')">폐기</button> ' : '') +
+          '<button class="warn sm" onclick="resetKey(\'' + key + '\')">초기화</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+    const phones = new Set(rows.map(r => normPhone(r.phone)).filter(Boolean));
+    setMsg('listMsg', rows.length + '건 · 손님 ' + phones.size + '명', 'muted');
   }
 
   // 폐기·초기화 공통 처리(확인창 → 서버 호출 → 목록 갱신)
