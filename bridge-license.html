@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>브릿지 라이선스 관리</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Malgun Gothic", sans-serif; background:#0f172a; color:#e2e8f0; margin:0; padding:24px; }
+  .wrap { max-width: 920px; margin:0 auto; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:#94a3b8; font-size:13px; margin-bottom:20px; }
+  .card { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:18px; margin-bottom:18px; }
+  .card h2 { font-size:15px; margin:0 0 12px; color:#f8fafc; }
+  label { display:block; font-size:13px; color:#94a3b8; margin:10px 0 4px; }
+  input[type=text], input[type=password], input[type=date] { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #475569; background:#0f172a; color:#e2e8f0; font-size:14px; }
+  input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1); }
+  button { cursor:pointer; border:none; border-radius:8px; padding:10px 16px; font-size:14px; font-weight:600; color:#fff; background:#6366f1; }
+  button:hover { opacity:.9; }
+  button.ghost { background:#334155; }
+  button.danger { background:#dc2626; }
+  button.warn { background:#d97706; }
+  button.sm { padding:6px 10px; font-size:12px; }
+  .row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+  .row > div { flex:1; min-width:180px; }
+  .newkey { margin-top:14px; padding:14px; background:#052e16; border:1px solid #16a34a; border-radius:8px; display:none; }
+  .newkey code { font-size:22px; font-weight:700; letter-spacing:1px; color:#4ade80; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #334155; white-space:nowrap; }
+  th { color:#94a3b8; font-weight:600; }
+  .badge { padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+  .b-active { background:#052e16; color:#4ade80; }
+  .b-unused { background:#1e293b; color:#94a3b8; border:1px solid #475569; }
+  .b-revoked { background:#450a0a; color:#f87171; }
+  .msg { font-size:13px; margin-top:8px; min-height:18px; }
+  .err { color:#f87171; }
+  .ok { color:#4ade80; }
+  .tablewrap { overflow-x:auto; }
+  .muted { color:#64748b; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>브릿지 라이선스 관리</h1>
+  <div class="sub">키 발급 · 목록 · 폐기(환불) · 기기 바인딩 초기화. 이 페이지는 사장님 PC에서만 열어 쓰세요.</div>
+
+  <div class="card">
+    <h2>🔑 관리자 비밀번호</h2>
+    <div class="row">
+      <div>
+        <label>ADMIN_TOKEN (서버에 설정한 관리자 비밀번호)</label>
+        <input type="password" id="adminToken" placeholder="관리자 비밀번호 입력">
+      </div>
+      <button class="ghost" onclick="saveToken()">저장</button>
+    </div>
+    <div class="msg muted" id="tokenMsg">브라우저에 저장되어 다음에 다시 안 넣어도 됩니다.</div>
+  </div>
+
+  <div class="card">
+    <h2>➕ 새 키 발급</h2>
+    <div class="row">
+      <div>
+        <label>받는 사람 (이름·연락처)</label>
+        <input type="text" id="orderRef" placeholder="예: 홍길동 010-1234-5678">
+      </div>
+      <div style="flex:0 0 200px">
+        <label>사용 가능 마지막 날짜 (비우면 영구)</label>
+        <input type="date" id="expiry">
+      </div>
+      <button onclick="issueKey()">키 발급</button>
+    </div>
+    <div class="newkey" id="newkeyBox">
+      새 키: <code id="newkeyVal"></code>
+      <button class="ghost sm" style="margin-left:10px" onclick="copyKey()">복사</button>
+      <div class="msg muted">이 키를 손님에게 전달하세요. (활성화 시 손님 폰에 바인딩됨)</div>
+    </div>
+    <div class="msg" id="issueMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>📋 발급 목록 <button class="ghost sm" style="margin-left:8px" onclick="loadList()">새로고침</button></h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th>키</th><th>상태</th><th>기기</th><th>만료</th><th>마지막 확인</th><th>받는 사람</th><th>작업</th>
+        </tr></thead>
+        <tbody id="listBody"><tr><td colspan="7" class="muted">새로고침을 눌러 불러오세요.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="msg" id="listMsg"></div>
+  </div>
+</div>
+
+<script>
+  const FN = "https://wfmdfvkuqgxjyabphfrm.supabase.co/functions/v1/admin-licenses";
+  // 게이트웨이 통과용 공개키(Publishable). 공개용이라 여기 있어도 안전.
+  const APIKEY = "sb_publishable_tYcexAE3U5jcj07Qe0R8kA_9PxoIJGj";
+
+  function token() { return document.getElementById('adminToken').value.trim(); }
+
+  window.addEventListener('load', () => {
+    const saved = localStorage.getItem('bridge_admin_token');
+    if (saved) document.getElementById('adminToken').value = saved;
+  });
+
+  function saveToken() {
+    localStorage.setItem('bridge_admin_token', token());
+    setMsg('tokenMsg', '저장했습니다.', 'ok');
+  }
+
+  async function call(action, extra) {
+    const t = token();
+    if (!t) throw new Error('관리자 비밀번호를 먼저 입력하세요.');
+    const res = await fetch(FN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': APIKEY, 'Authorization': 'Bearer ' + APIKEY },
+      body: JSON.stringify(Object.assign({ admin_token: t, action }, extra || {}))
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok) {
+      if (data.reason === 'unauthorized') throw new Error('비밀번호가 틀렸습니다.');
+      if (data.reason === 'server_misconfigured') throw new Error('서버에 ADMIN_TOKEN 이 설정되지 않았습니다.');
+      throw new Error(data.reason || ('오류(HTTP ' + res.status + ')'));
+    }
+    return data;
+  }
+
+  async function issueKey() {
+    setMsg('issueMsg', '발급 중...', '');
+    try {
+      const extra = { order_ref: document.getElementById('orderRef').value.trim() };
+      const dateStr = document.getElementById('expiry').value;
+      if (dateStr) {
+        // 선택한 날짜의 그날 끝(23:59:59)까지 유효
+        extra.expires_at = new Date(dateStr + 'T23:59:59').toISOString();
+      }
+      const data = await call('issue', extra);
+      document.getElementById('newkeyVal').textContent = data.license_key;
+      document.getElementById('newkeyBox').style.display = 'block';
+      setMsg('issueMsg', '', '');
+      loadList();
+    } catch (e) { setMsg('issueMsg', e.message, 'err'); }
+  }
+
+  function copyKey() {
+    const v = document.getElementById('newkeyVal').textContent;
+    navigator.clipboard.writeText(v).then(() => setMsg('issueMsg', '복사됨: ' + v, 'ok'));
+  }
+
+  function fmtDate(s) {
+    if (!s) return '<span class="muted">-</span>';
+    const d = new Date(s);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function badge(status) {
+    const map = { active:'활성', unused:'미사용', revoked:'폐기' };
+    return '<span class="badge b-' + status + '">' + (map[status]||status) + '</span>';
+  }
+  function fmtExpiry(s) {
+    if (!s) return '<span class="muted">영구</span>';
+    const days = Math.ceil((new Date(s).getTime() - Date.now()) / 86400000);
+    if (days < 0) return '<span style="color:#f87171">만료됨</span>';
+    if (days <= 7) return fmtDate(s) + ' <span style="color:#fbbf24">(D-' + days + ')</span>';
+    return fmtDate(s);
+  }
+  function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  async function loadList() {
+    setMsg('listMsg', '불러오는 중...', '');
+    try {
+      const data = await call('list', {});
+      const rows = data.rows || [];
+      const body = document.getElementById('listBody');
+      if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="muted">아직 발급된 키가 없습니다.</td></tr>'; setMsg('listMsg','',''); return; }
+      body.innerHTML = rows.map(r => {
+        const dev = r.device_id ? '<span class="ok">등록됨</span>' : '<span class="muted">미등록</span>';
+        const key = esc(r.license_key);
+        return '<tr>' +
+          '<td><code>' + key + '</code></td>' +
+          '<td>' + badge(r.status) + '</td>' +
+          '<td>' + dev + '</td>' +
+          '<td>' + fmtExpiry(r.expires_at) + '</td>' +
+          '<td>' + fmtDate(r.last_verified_at) + '</td>' +
+          '<td>' + esc(r.order_ref || r.note || '') + '</td>' +
+          '<td>' +
+            (r.status !== 'revoked' ? '<button class="danger sm" onclick="revokeKey(\'' + key + '\')">폐기</button> ' : '') +
+            '<button class="warn sm" onclick="resetKey(\'' + key + '\')">초기화</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+      setMsg('listMsg', rows.length + '건', 'muted');
+    } catch (e) { setMsg('listMsg', e.message, 'err'); }
+  }
+
+  async function revokeKey(key) {
+    if (!confirm('이 키를 폐기(환불/차단)할까요?\n' + key + '\n\n폐기하면 그 폰에서 다음 확인 때 잠깁니다.')) return;
+    try { await call('revoke', { license_key: key }); loadList(); }
+    catch (e) { setMsg('listMsg', e.message, 'err'); }
+  }
+  async function resetKey(key) {
+    if (!confirm('이 키의 기기 바인딩을 초기화할까요?\n' + key + '\n\n초기화하면 다른(새) 폰에서 다시 활성화할 수 있게 됩니다. (예외적 기기 이전 허용용)')) return;
+    try { await call('reset', { license_key: key }); loadList(); }
+    catch (e) { setMsg('listMsg', e.message, 'err'); }
+  }
+
+  function setMsg(id, text, cls) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'msg ' + (cls || '');
+  }
+</script>
+</body>
+</html>
