@@ -50,11 +50,10 @@
     <div class="row">
       <div>
         <label>ADMIN_TOKEN (서버에 설정한 관리자 비밀번호)</label>
-        <input type="password" id="adminToken" placeholder="관리자 비밀번호 입력">
+        <input type="password" id="adminToken" placeholder="관리자 비밀번호 입력" autocomplete="off">
       </div>
-      <button class="ghost" onclick="saveToken()">저장</button>
     </div>
-    <div class="msg muted" id="tokenMsg">브라우저에 저장되어 다음에 다시 안 넣어도 됩니다.</div>
+    <div class="msg muted">🔒 보안을 위해 저장하지 않습니다. 이 페이지를 열 때마다 입력하세요.</div>
   </div>
 
   <div class="card">
@@ -98,16 +97,6 @@
   const APIKEY = "sb_publishable_tYcexAE3U5jcj07Qe0R8kA_9PxoIJGj";
 
   function token() { return document.getElementById('adminToken').value.trim(); }
-
-  window.addEventListener('load', () => {
-    const saved = localStorage.getItem('bridge_admin_token');
-    if (saved) document.getElementById('adminToken').value = saved;
-  });
-
-  function saveToken() {
-    localStorage.setItem('bridge_admin_token', token());
-    setMsg('tokenMsg', '저장했습니다.', 'ok');
-  }
 
   async function call(action, extra) {
     const t = token();
