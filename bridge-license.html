@@ -43,7 +43,7 @@
 <body>
 <div class="wrap">
   <h1>브릿지 라이선스 관리</h1>
-  <div class="sub">키 발급 · 목록 · 폐기(환불) · 기기 바인딩 초기화. 이 페이지는 사장님 PC에서만 열어 쓰세요.</div>
+  <div class="sub">키 발급 · 목록 · 폐기(환불). 폰 이전이 필요하면 새 키를 재발급하세요.</div>
 
   <div class="card" id="authCard">
     <h2>🔑 관리자 로그인</h2>
@@ -288,8 +288,7 @@
         '<td>' + fmtExpiry(r.expires_at) + '</td>' +
         '<td>' + fmtDate(r.last_verified_at) + '</td>' +
         '<td>' +
-          (r.status !== 'revoked' ? '<button class="danger sm" onclick="revokeKey(\'' + key + '\')">폐기</button> ' : '') +
-          '<button class="warn sm" onclick="resetKey(\'' + key + '\')">초기화</button>' +
+          (r.status !== 'revoked' ? '<button class="danger sm" onclick="revokeKey(\'' + key + '\')">폐기</button>' : '<span class="muted">-</span>') +
         '</td>' +
       '</tr>';
     }).join('');
@@ -297,7 +296,7 @@
     setMsg('listMsg', rows.length + '건 · 손님 ' + phones.size + '명', 'muted');
   }
 
-  // 폐기·초기화 공통 처리(확인창 → 서버 호출 → 목록 갱신)
+  // 행 작업 공통 처리(확인창 → 서버 호출 → 목록 갱신). 현재는 폐기에 사용.
   async function rowAction(action, key, confirmMsg) {
     if (!confirm(confirmMsg)) return;
     try { await call(action, { license_key: key }); loadList(); }
@@ -305,9 +304,6 @@
   }
   function revokeKey(key) {
     rowAction('revoke', key, '이 키를 폐기(환불/차단)할까요?\n' + key + '\n\n폐기하면 그 폰에서 다음 확인 때 잠깁니다.');
-  }
-  function resetKey(key) {
-    rowAction('reset', key, '이 키의 기기 바인딩을 초기화할까요?\n' + key + '\n\n초기화하면 다른(새) 폰에서 다시 활성화할 수 있게 됩니다. (예외적 기기 이전 허용용)');
   }
 
   function setMsg(id, text, cls) {
