@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>브릿지 라이선스 관리</title>
+<title>라이선스 관리 (브릿지 · 크롬)</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: -apple-system, "Malgun Gothic", sans-serif; background:#0f172a; color:#e2e8f0; margin:0; padding:24px; }
-  .wrap { max-width: 920px; margin:0 auto; }
+  .wrap { max-width: 960px; margin:0 auto; }
   h1 { font-size:20px; margin:0 0 4px; }
   .sub { color:#94a3b8; font-size:13px; margin-bottom:20px; }
   .card { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:18px; margin-bottom:18px; }
@@ -39,12 +39,16 @@
   .ok { color:#4ade80; }
   .tablewrap { overflow-x:auto; }
   .muted { color:#64748b; }
+  /* 제품 탭 */
+  .seg { display:flex; gap:8px; }
+  .seg-btn { background:#0f172a; border:1px solid #475569; color:#94a3b8; font-weight:700; }
+  .seg-btn.active { background:#6366f1; border-color:#6366f1; color:#fff; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>브릿지 라이선스 관리</h1>
-  <div class="sub">키 발급 · 목록 · 폐기(환불). 폰 이전이 필요하면 새 키를 재발급하세요.</div>
+  <h1>라이선스 관리</h1>
+  <div class="sub">브릿지 · 크롬 프로필 키를 한 곳에서 각각 발급 · 폐기합니다.</div>
 
   <div class="card" id="authCard">
     <h2>🔑 관리자 로그인</h2>
@@ -68,22 +72,32 @@
   </div>
 
   <div id="adminArea" style="display:none">
+
+  <!-- 제품 선택 탭 -->
+  <div class="card">
+    <div class="seg">
+      <button id="tab-bridge" class="seg-btn active" onclick="switchProduct('bridge')">🌉 브릿지</button>
+      <button id="tab-chrome" class="seg-btn" onclick="switchProduct('chrome')">🌐 크롬 프로필</button>
+    </div>
+    <div class="msg muted" id="prodMsg" style="margin-top:10px">지금 관리 중: <b id="prodLabel">브릿지</b></div>
+  </div>
+
   <div class="card">
     <h2>➕ 새 키 발급</h2>
     <div class="row">
-      <div style="flex:1 1 220px">
+      <div id="phoneWrap" style="flex:1 1 220px">
         <label>받는 분 전화번호 (필수 · 손님 구분 키)</label>
         <input type="tel" id="phone" placeholder="예: 010-1234-5678" autocomplete="off">
       </div>
       <div style="flex:1 1 160px">
-        <label>메모 (선택 · 이름 등)</label>
+        <label id="memoLabel">메모 (선택 · 이름 등)</label>
         <input type="text" id="memo" placeholder="예: 홍길동" autocomplete="off">
       </div>
     </div>
     <div class="row" style="margin-top:8px">
       <div style="flex:0 0 90px">
         <label>개수</label>
-        <input type="number" id="count" value="1" min="1" max="20">
+        <input type="number" id="count" value="1" min="1" max="50">
       </div>
       <div style="flex:0 0 200px">
         <label>사용 가능 마지막 날짜 (비우면 영구)</label>
@@ -92,7 +106,7 @@
       <button onclick="issueKey()">키 발급</button>
     </div>
     <div class="newkey" id="newkeyBox">
-      <div style="margin-bottom:8px;font-size:13px;color:#94a3b8">발급된 키 (손님에게 전달 · 활성화 시 손님 폰에 바인딩)</div>
+      <div style="margin-bottom:8px;font-size:13px;color:#94a3b8" id="newkeyHint">발급된 키 (받는 분에게 전달)</div>
       <code id="newkeyVal"></code>
       <button class="ghost sm" style="margin-left:10px" onclick="copyKey()">전체 복사</button>
     </div>
@@ -101,13 +115,11 @@
 
   <div class="card">
     <h2>📋 발급 목록 <button class="ghost sm" style="margin-left:8px" onclick="loadList()">새로고침</button></h2>
-    <input type="text" id="searchBox" placeholder="🔍 전화번호·키·메모로 검색 (같은 손님끼리 묶여서 보임)" oninput="renderRows()" autocomplete="off" style="margin-bottom:12px">
+    <input type="text" id="searchBox" placeholder="🔍 키·받는사람으로 검색" oninput="renderRows()" autocomplete="off" style="margin-bottom:12px">
     <div class="tablewrap">
       <table>
-        <thead><tr>
-          <th>키</th><th>전화번호</th><th>메모</th><th>상태</th><th>기기</th><th>만료</th><th>마지막 확인</th><th>작업</th>
-        </tr></thead>
-        <tbody id="listBody"><tr><td colspan="8" class="muted">새로고침을 눌러 불러오세요.</td></tr></tbody>
+        <thead id="listHead"></thead>
+        <tbody id="listBody"><tr><td colspan="8" class="muted">로그인하면 목록이 보입니다.</td></tr></tbody>
       </table>
     </div>
     <div class="msg" id="listMsg"></div>
@@ -116,13 +128,37 @@
 </div>
 
 <script>
-  const FN = "https://wfmdfvkuqgxjyabphfrm.supabase.co/functions/v1/admin-licenses";
-  // 게이트웨이 통과용 공개키(Publishable). 공개용이라 여기 있어도 안전.
-  const APIKEY = "sb_publishable_tYcexAE3U5jcj07Qe0R8kA_9PxoIJGj";
+  // 브릿지·크롬 모두 '같은 Supabase 프로젝트'의 서로 다른 함수를 호출.
+  // 관리자 비번(admin_token)은 두 함수가 동일하게 쓰므로 로그인 한 번으로 둘 다 관리됨.
+  const BASE = "https://wfmdfvkuqgxjyabphfrm.supabase.co/functions/v1";
+  const APIKEY = "sb_publishable_tYcexAE3U5jcj07Qe0R8kA_9PxoIJGj"; // 공개키(안전)
 
-  let allRows = [];    // 마지막으로 불러온 전체 목록(검색 필터용)
-  let lastIssued = []; // 방금 발급한 키들(전체 복사용)
-  let authToken = null; // 로그인 세션 동안만 메모리에 유지(저장 안 함 · 새로고침/로그아웃 시 사라짐)
+  const PRODUCTS = {
+    bridge: {
+      label: "브릿지",
+      fn: BASE + "/admin-licenses",
+      needsPhone: true,
+      searchPlaceholder: "🔍 전화번호·키·메모로 검색 (같은 손님끼리 묶여서 보임)",
+      newkeyHint: "발급된 키 (손님에게 전달 · 활성화 시 손님 폰에 바인딩)",
+      memoLabel: "메모 (선택 · 이름 등)",
+      cols: ["키","전화번호","메모","상태","기기","만료","마지막 확인","작업"],
+    },
+    chrome: {
+      label: "크롬 프로필",
+      fn: BASE + "/chrome-admin",
+      needsPhone: false,
+      searchPlaceholder: "🔍 키·받는사람·PC이름으로 검색",
+      newkeyHint: "발급된 키 (받는 분에게 전달 · 활성화 시 그 PC에 바인딩)",
+      memoLabel: "받는 사람 (선택 · 이름/메모)",
+      cols: ["키","받는 사람","상태","활성 PC","만료","마지막 확인","작업"],
+    },
+  };
+  let PRODUCT = "bridge";
+  function cfg() { return PRODUCTS[PRODUCT]; }
+
+  let allRows = [];
+  let lastIssued = [];
+  let authToken = null; // 로그인 세션 동안만 메모리에 유지(저장 안 함)
 
   function token() { return authToken; }
 
@@ -132,10 +168,11 @@
     setMsg('loginMsg', '확인 중...', '');
     authToken = pw;
     try {
-      await call('ping', {});          // 비번 검증
+      await call('ping', {});
       document.getElementById('adminToken').value = '';
       setMsg('loginMsg', '', '');
       setLoggedIn(true);
+      applyProductUI();
       loadList();
     } catch (e) {
       authToken = null;
@@ -144,14 +181,11 @@
   }
 
   function logout() {
-    authToken = null;
-    allRows = [];
-    lastIssued = [];
+    authToken = null; allRows = []; lastIssued = [];
     document.getElementById('newkeyBox').style.display = 'none';
     document.getElementById('listBody').innerHTML =
       '<tr><td colspan="8" class="muted">로그인하면 목록이 보입니다.</td></tr>';
-    setMsg('listMsg', '', '');
-    setMsg('issueMsg', '', '');
+    setMsg('listMsg', '', ''); setMsg('issueMsg', '', '');
     setLoggedIn(false);
   }
 
@@ -159,6 +193,31 @@
     document.getElementById('loginBox').style.display = v ? 'none' : 'block';
     document.getElementById('loggedInBox').style.display = v ? 'block' : 'none';
     document.getElementById('adminArea').style.display = v ? 'block' : 'none';
+  }
+
+  // 제품 전환(로그인 유지 · 목록만 다시 불러옴)
+  function switchProduct(p) {
+    if (!PRODUCTS[p] || p === PRODUCT) { if (p === PRODUCT) return; }
+    PRODUCT = p;
+    document.getElementById('tab-bridge').classList.toggle('active', p === 'bridge');
+    document.getElementById('tab-chrome').classList.toggle('active', p === 'chrome');
+    lastIssued = [];
+    document.getElementById('newkeyBox').style.display = 'none';
+    setMsg('issueMsg', '', '');
+    applyProductUI();
+    if (authToken) loadList();
+  }
+
+  // 현재 제품에 맞춰 폼·라벨·검색창을 조정
+  function applyProductUI() {
+    const c = cfg();
+    document.getElementById('prodLabel').textContent = c.label;
+    document.getElementById('phoneWrap').style.display = c.needsPhone ? '' : 'none';
+    document.getElementById('memoLabel').textContent = c.memoLabel;
+    document.getElementById('newkeyHint').textContent = c.newkeyHint;
+    document.getElementById('searchBox').placeholder = c.searchPlaceholder;
+    document.getElementById('listHead').innerHTML =
+      '<tr>' + c.cols.map(h => '<th>' + h + '</th>').join('') + '</tr>';
   }
 
   function normPhone(s) { return (s || '').replace(/\D/g, ''); }
@@ -172,7 +231,7 @@
   async function call(action, extra) {
     const t = token();
     if (!t) throw new Error('관리자 비밀번호를 먼저 입력하세요.');
-    const res = await fetch(FN, {
+    const res = await fetch(cfg().fn, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': APIKEY, 'Authorization': 'Bearer ' + APIKEY },
       body: JSON.stringify(Object.assign({ admin_token: t, action }, extra || {}))
@@ -180,25 +239,31 @@
     const data = await res.json().catch(() => ({}));
     if (!data.ok) {
       if (data.reason === 'unauthorized') throw new Error('비밀번호가 틀렸습니다.');
-      if (data.reason === 'server_misconfigured') throw new Error('서버에 ADMIN_TOKEN 이 설정되지 않았습니다.');
+      if (data.reason === 'server_misconfigured') throw new Error('서버에 관리자 토큰이 설정되지 않았습니다.');
       throw new Error(data.reason || ('오류(HTTP ' + res.status + ')'));
     }
     return data;
   }
 
   async function issueKey() {
-    const phone = normPhone(document.getElementById('phone').value);
-    if (!phone) { setMsg('issueMsg', '받는 분 전화번호를 입력하세요.', 'err'); return; }
+    const c = cfg();
+    const extraBase = {};
+    if (c.needsPhone) {
+      const phone = normPhone(document.getElementById('phone').value);
+      if (!phone) { setMsg('issueMsg', '받는 분 전화번호를 입력하세요.', 'err'); return; }
+      extraBase.phone = phone;
+    }
     const memo = document.getElementById('memo').value.trim();
-    const count = Math.max(1, Math.min(20, parseInt(document.getElementById('count').value, 10) || 1));
+    if (memo) extraBase.order_ref = memo;
+    const count = Math.max(1, Math.min(50, parseInt(document.getElementById('count').value, 10) || 1));
     const dateStr = document.getElementById('expiry').value;
-    const expires_at = dateStr ? new Date(dateStr + 'T23:59:59').toISOString() : undefined; // 그날 끝까지 유효
+    const expires_at = dateStr ? new Date(dateStr + 'T23:59:59').toISOString() : undefined;
 
     setMsg('issueMsg', count + '개 발급 중...', '');
     lastIssued = [];
     try {
       for (let i = 0; i < count; i++) {
-        const extra = { phone: phone, order_ref: memo };
+        const extra = Object.assign({}, extraBase);
         if (expires_at) extra.expires_at = expires_at;
         const data = await call('issue', extra);
         lastIssued.push(data.license_key);
@@ -208,7 +273,6 @@
       setMsg('issueMsg', lastIssued.length + '개 발급 완료', 'ok');
       loadList();
     } catch (e) {
-      // 일부라도 발급됐으면 보여준다
       if (lastIssued.length) {
         document.getElementById('newkeyVal').innerHTML = lastIssued.join('<br>');
         document.getElementById('newkeyBox').style.display = 'block';
@@ -247,73 +311,112 @@
     try {
       const data = await call('list', {});
       allRows = data.rows || [];
-      // 같은 전화번호(손님)끼리 묶고, 그 안은 최신 발급순
-      allRows.sort((a, b) => {
-        const pa = normPhone(a.phone), pb = normPhone(b.phone);
-        if (pa !== pb) return pa < pb ? -1 : 1;
-        return (b.created_at || '').localeCompare(a.created_at || '');
-      });
+      if (PRODUCT === 'bridge') {
+        // 같은 전화번호(손님)끼리 묶고, 그 안은 최신 발급순
+        allRows.sort((a, b) => {
+          const pa = normPhone(a.phone), pb = normPhone(b.phone);
+          if (pa !== pb) return pa < pb ? -1 : 1;
+          return (b.created_at || '').localeCompare(a.created_at || '');
+        });
+      }
       renderRows();
     } catch (e) { setMsg('listMsg', e.message, 'err'); }
   }
 
-  // 검색어로 거른 뒤 표를 그린다(전화번호 숫자 / 키 / 메모 매칭).
   function renderRows() {
+    const c = cfg();
     const raw = document.getElementById('searchBox').value.trim();
     const qDigit = normPhone(raw);
     const qLower = raw.toLowerCase();
     let rows = allRows;
     if (raw) {
-      rows = allRows.filter(r =>
-        (qDigit && normPhone(r.phone).includes(qDigit)) ||
-        (r.license_key || '').toLowerCase().includes(qLower) ||
-        (r.order_ref || '').toLowerCase().includes(qLower)
-      );
+      rows = allRows.filter(r => {
+        if (c.needsPhone && qDigit && normPhone(r.phone).includes(qDigit)) return true;
+        if ((r.license_key || '').toLowerCase().includes(qLower)) return true;
+        if ((r.order_ref || '').toLowerCase().includes(qLower)) return true;
+        if ((r.device_name || '').toLowerCase().includes(qLower)) return true;
+        return false;
+      });
     }
+    const colspan = c.cols.length;
     const body = document.getElementById('listBody');
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="8" class="muted">' +
+      body.innerHTML = '<tr><td colspan="' + colspan + '" class="muted">' +
         (allRows.length ? '검색 결과가 없습니다.' : '아직 발급된 키가 없습니다.') + '</td></tr>';
       setMsg('listMsg', '', 'muted');
       return;
     }
-    body.innerHTML = rows.map(r => {
-      const dev = r.device_id ? '<span class="ok">등록됨</span>' : '<span class="muted">미등록</span>';
-      const key = esc(r.license_key);
-      return '<tr>' +
-        '<td><code>' + key + '</code></td>' +
-        '<td>' + esc(fmtPhone(r.phone)) + '</td>' +
-        '<td>' + esc(r.order_ref || '') + '</td>' +
-        '<td>' + badge(r.status) + '</td>' +
-        '<td>' + dev + '</td>' +
-        '<td>' + fmtExpiry(r.expires_at) + '</td>' +
-        '<td>' + fmtDate(r.last_verified_at) + '</td>' +
-        '<td>' +
-          (r.status === 'revoked'
-            ? '<button class="restore sm" onclick="restoreKey(\'' + key + '\')">되살리기</button> '
-            : '<button class="danger sm" onclick="revokeKey(\'' + key + '\')">폐기</button> ') +
-          '<button class="ghost sm" onclick="deleteKey(\'' + key + '\')">삭제</button>' +
-        '</td>' +
-      '</tr>';
-    }).join('');
-    const phones = new Set(rows.map(r => normPhone(r.phone)).filter(Boolean));
-    setMsg('listMsg', rows.length + '건 · 손님 ' + phones.size + '명', 'muted');
+    body.innerHTML = rows.map(r => PRODUCT === 'bridge' ? bridgeRow(r) : chromeRow(r)).join('');
+    if (PRODUCT === 'bridge') {
+      const phones = new Set(rows.map(r => normPhone(r.phone)).filter(Boolean));
+      setMsg('listMsg', rows.length + '건 · 손님 ' + phones.size + '명', 'muted');
+    } else {
+      setMsg('listMsg', rows.length + '건', 'muted');
+    }
   }
 
-  // 행 작업 공통 처리(확인창 → 서버 호출 → 목록 갱신). 현재는 폐기에 사용.
+  function bridgeRow(r) {
+    const dev = r.device_id ? '<span class="ok">등록됨</span>' : '<span class="muted">미등록</span>';
+    const key = esc(r.license_key);
+    return '<tr>' +
+      '<td><code>' + key + '</code></td>' +
+      '<td>' + esc(fmtPhone(r.phone)) + '</td>' +
+      '<td>' + esc(r.order_ref || '') + '</td>' +
+      '<td>' + badge(r.status) + '</td>' +
+      '<td>' + dev + '</td>' +
+      '<td>' + fmtExpiry(r.expires_at) + '</td>' +
+      '<td>' + fmtDate(r.last_verified_at) + '</td>' +
+      '<td>' + rowActions(key, r, false) + '</td>' +
+    '</tr>';
+  }
+
+  function chromeRow(r) {
+    const key = esc(r.license_key);
+    const pc = r.device_id
+      ? '<span class="ok">' + esc(r.device_name || '등록됨') + '</span>'
+      : '<span class="muted">미등록</span>';
+    return '<tr>' +
+      '<td><code>' + key + '</code></td>' +
+      '<td>' + esc(r.order_ref || '') + '</td>' +
+      '<td>' + badge(r.status) + '</td>' +
+      '<td>' + pc + '</td>' +
+      '<td>' + fmtExpiry(r.expires_at) + '</td>' +
+      '<td>' + fmtDate(r.last_verified_at) + '</td>' +
+      '<td>' + rowActions(key, r, true) + '</td>' +
+    '</tr>';
+  }
+
+  // 공통 작업 버튼. hasUnbind=true(크롬)면 바인딩된 경우 'PC해제' 추가.
+  function rowActions(key, r, hasUnbind) {
+    let a = '';
+    if (r.status === 'revoked') {
+      a += '<button class="restore sm" onclick="restoreKey(\'' + key + '\')">되살리기</button> ';
+    } else {
+      a += '<button class="danger sm" onclick="revokeKey(\'' + key + '\')">폐기</button> ';
+    }
+    if (hasUnbind && r.device_id) {
+      a += '<button class="warn sm" onclick="unbindKey(\'' + key + '\')">PC해제</button> ';
+    }
+    a += '<button class="ghost sm" onclick="deleteKey(\'' + key + '\')">삭제</button>';
+    return a;
+  }
+
   async function rowAction(action, key, confirmMsg) {
     if (!confirm(confirmMsg)) return;
     try { await call(action, { license_key: key }); loadList(); }
     catch (e) { setMsg('listMsg', e.message, 'err'); }
   }
   function revokeKey(key) {
-    rowAction('revoke', key, '이 키를 폐기(환불/차단)할까요?\n' + key + '\n\n폐기하면 그 폰에서 다음 확인 때 잠깁니다. (나중에 되살리기 가능)');
+    rowAction('revoke', key, '이 키를 폐기(차단)할까요?\n' + key + '\n\n폐기하면 다음 확인 때 잠깁니다. (되살리기 가능)');
   }
   function restoreKey(key) {
-    rowAction('restore', key, '이 키를 되살릴까요?\n' + key + '\n\n폐기를 취소하고 다시 사용 가능해집니다. (묶였던 폰이 있으면 그 폰에서 다시 작동)');
+    rowAction('restore', key, '이 키를 되살릴까요?\n' + key + '\n\n폐기를 취소하고 다시 사용 가능해집니다.');
+  }
+  function unbindKey(key) {
+    rowAction('unbind', key, '이 키의 PC 바인딩을 풀까요?\n' + key + '\n\n다른 PC에서 다시 활성화할 수 있게 됩니다. (PC 이전용)');
   }
   function deleteKey(key) {
-    rowAction('delete', key, '⚠️ 이 키를 완전히 삭제할까요?\n' + key + '\n\n되돌릴 수 없습니다. 활성 손님이면 그 손님 앱이 잠깁니다.\n(테스트 키·완전 정리용)');
+    rowAction('delete', key, '⚠️ 이 키를 완전히 삭제할까요?\n' + key + '\n\n되돌릴 수 없습니다.');
   }
 
   function setMsg(id, text, cls) {
