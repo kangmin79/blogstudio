@@ -48,7 +48,7 @@
 <body>
 <div class="wrap">
   <h1>라이선스 관리</h1>
-  <div class="sub">브릿지 · 크롬 프로필 키를 한 곳에서 각각 발급 · 폐기합니다.</div>
+  <div class="sub">브릿지 · 멀티프로필 키를 한 곳에서 각각 발급 · 폐기합니다.</div>
 
   <div class="card" id="authCard">
     <h2>🔑 관리자 로그인</h2>
@@ -77,7 +77,7 @@
   <div class="card">
     <div class="seg">
       <button id="tab-bridge" class="seg-btn active" onclick="switchProduct('bridge')">🌉 브릿지</button>
-      <button id="tab-chrome" class="seg-btn" onclick="switchProduct('chrome')">🌐 크롬 프로필</button>
+      <button id="tab-chrome" class="seg-btn" onclick="switchProduct('chrome')">🌐 멀티프로필</button>
     </div>
     <div class="msg muted" id="prodMsg" style="margin-top:10px">지금 관리 중: <b id="prodLabel">브릿지</b></div>
   </div>
@@ -144,7 +144,7 @@
       cols: ["키","전화번호","메모","상태","기기","만료","마지막 확인","작업"],
     },
     chrome: {
-      label: "크롬 프로필",
+      label: "멀티프로필",
       fn: BASE + "/chrome-admin",
       needsPhone: false,
       searchPlaceholder: "🔍 키·받는사람·PC이름으로 검색",
