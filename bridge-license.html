@@ -48,7 +48,7 @@
 <body>
 <div class="wrap">
   <h1>라이선스 관리</h1>
-  <div class="sub">브릿지 · 멀티프로필 키를 한 곳에서 각각 발급 · 폐기합니다.</div>
+  <div class="sub">브릿지 · 멀티프로필 · 매장 프록시 키를 한 곳에서 각각 발급 · 폐기합니다.</div>
 
   <div class="card" id="authCard">
     <h2>🔑 관리자 로그인</h2>
@@ -78,6 +78,7 @@
     <div class="seg">
       <button id="tab-bridge" class="seg-btn active" onclick="switchProduct('bridge')">🌉 브릿지</button>
       <button id="tab-chrome" class="seg-btn" onclick="switchProduct('chrome')">🌐 멀티프로필</button>
+      <button id="tab-proxy" class="seg-btn" onclick="switchProduct('proxy')">🔀 매장 프록시</button>
     </div>
     <div class="msg muted" id="prodMsg" style="margin-top:10px">지금 관리 중: <b id="prodLabel">브릿지</b></div>
   </div>
@@ -98,6 +99,10 @@
       <div style="flex:0 0 90px">
         <label>개수</label>
         <input type="number" id="count" value="1" min="1" max="50">
+      </div>
+      <div id="maxConnsWrap" style="flex:0 0 110px; display:none">
+        <label>동시접속 한도</label>
+        <input type="number" id="maxConns" value="3" min="1" max="50">
       </div>
       <div style="flex:0 0 200px">
         <label>사용 가능 마지막 날짜 (비우면 영구)</label>
@@ -152,6 +157,16 @@
       memoLabel: "받는 사람 (선택 · 이름/메모)",
       cols: ["키","받는 사람","상태","활성 PC","만료","마지막 확인","작업"],
     },
+    proxy: {
+      label: "매장 프록시",
+      fn: BASE + "/proxy-admin",
+      needsPhone: false,
+      hasMaxConns: true,
+      searchPlaceholder: "🔍 키·받는사람으로 검색",
+      newkeyHint: "발급된 키 (받는 분에게 전달 · 확장 프로그램에 입력)",
+      memoLabel: "받는 사람 (선택 · 업체명 등)",
+      cols: ["키","받는 사람","상태","동시접속","만료","마지막 확인","작업"],
+    },
   };
   let PRODUCT = "bridge";
   function cfg() { return PRODUCTS[PRODUCT]; }
@@ -201,6 +216,7 @@
     PRODUCT = p;
     document.getElementById('tab-bridge').classList.toggle('active', p === 'bridge');
     document.getElementById('tab-chrome').classList.toggle('active', p === 'chrome');
+    document.getElementById('tab-proxy').classList.toggle('active', p === 'proxy');
     lastIssued = [];
     document.getElementById('newkeyBox').style.display = 'none';
     setMsg('issueMsg', '', '');
@@ -213,6 +229,7 @@
     const c = cfg();
     document.getElementById('prodLabel').textContent = c.label;
     document.getElementById('phoneWrap').style.display = c.needsPhone ? '' : 'none';
+    document.getElementById('maxConnsWrap').style.display = c.hasMaxConns ? '' : 'none';
     document.getElementById('memoLabel').textContent = c.memoLabel;
     document.getElementById('newkeyHint').textContent = c.newkeyHint;
     document.getElementById('searchBox').placeholder = c.searchPlaceholder;
@@ -255,6 +272,9 @@
     }
     const memo = document.getElementById('memo').value.trim();
     if (memo) extraBase.order_ref = memo;
+    if (c.hasMaxConns) {
+      extraBase.max_conns = Math.max(1, Math.min(50, parseInt(document.getElementById('maxConns').value, 10) || 3));
+    }
     const count = Math.max(1, Math.min(50, parseInt(document.getElementById('count').value, 10) || 1));
     const dateStr = document.getElementById('expiry').value;
     const expires_at = dateStr ? new Date(dateStr + 'T23:59:59').toISOString() : undefined;
@@ -346,7 +366,9 @@
       setMsg('listMsg', '', 'muted');
       return;
     }
-    body.innerHTML = rows.map(r => PRODUCT === 'bridge' ? bridgeRow(r) : chromeRow(r)).join('');
+    body.innerHTML = rows.map(r =>
+      PRODUCT === 'bridge' ? bridgeRow(r) : PRODUCT === 'proxy' ? proxyRow(r) : chromeRow(r)
+    ).join('');
     if (PRODUCT === 'bridge') {
       const phones = new Set(rows.map(r => normPhone(r.phone)).filter(Boolean));
       setMsg('listMsg', rows.length + '건 · 손님 ' + phones.size + '명', 'muted');
@@ -384,6 +406,27 @@
       '<td>' + fmtDate(r.last_verified_at) + '</td>' +
       '<td>' + rowActions(key, r, true) + '</td>' +
     '</tr>';
+  }
+
+  function proxyRow(r) {
+    const key = esc(r.license_key);
+    return '<tr>' +
+      '<td><code>' + key + '</code></td>' +
+      '<td>' + esc(r.order_ref || '') + '</td>' +
+      '<td>' + badge(r.status) + '</td>' +
+      '<td>' + esc(r.max_conns) + '개 <button class="ghost sm" onclick="editConns(\'' + key + '\', ' + Number(r.max_conns) + ')">변경</button></td>' +
+      '<td>' + fmtExpiry(r.expires_at) + '</td>' +
+      '<td>' + fmtDate(r.last_verified_at) + '</td>' +
+      '<td>' + rowActions(key, r, false) + '</td>' +
+    '</tr>';
+  }
+
+  async function editConns(key, current) {
+    const v = prompt('동시접속 한도 변경\n' + key, String(current));
+    if (v === null) return;
+    const n = Math.max(1, Math.min(50, parseInt(v, 10) || current));
+    try { await call('set_conns', { license_key: key, max_conns: n }); loadList(); }
+    catch (e) { setMsg('listMsg', e.message, 'err'); }
   }
 
   // 공통 작업 버튼. hasUnbind=true(크롬)면 바인딩된 경우 'PC해제' 추가.
