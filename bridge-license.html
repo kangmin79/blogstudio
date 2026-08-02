@@ -415,7 +415,7 @@
       '<td>' + esc(r.order_ref || '') + '</td>' +
       '<td>' + badge(r.status) + '</td>' +
       '<td>' + esc(r.max_conns) + '개 <button class="ghost sm" onclick="editConns(\'' + key + '\', ' + Number(r.max_conns) + ')">변경</button></td>' +
-      '<td>' + fmtExpiry(r.expires_at) + '</td>' +
+      '<td>' + fmtExpiry(r.expires_at) + ' <button class="ghost sm" onclick="editExpiry(\'' + key + '\', \'' + (r.expires_at || '') + '\')">변경</button></td>' +
       '<td>' + fmtDate(r.last_verified_at) + '</td>' +
       '<td>' + rowActions(key, r, false) + '</td>' +
     '</tr>';
@@ -426,6 +426,20 @@
     if (v === null) return;
     const n = Math.max(1, Math.min(50, parseInt(v, 10) || current));
     try { await call('set_conns', { license_key: key, max_conns: n }); loadList(); }
+    catch (e) { setMsg('listMsg', e.message, 'err'); }
+  }
+
+  async function editExpiry(key, currentIso) {
+    const currentDate = currentIso ? fmtDate(currentIso).replace(/<[^>]+>/g, '') : '';
+    const v = prompt('만료일 변경 (YYYY-MM-DD 형식, 비우면 영구)\n' + key, currentDate);
+    if (v === null) return;
+    const trimmed = v.trim();
+    if (trimmed && !/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      setMsg('listMsg', '날짜 형식은 YYYY-MM-DD 여야 합니다.', 'err');
+      return;
+    }
+    const expires_at = trimmed ? new Date(trimmed + 'T23:59:59').toISOString() : '';
+    try { await call('set_expiry', { license_key: key, expires_at }); loadList(); }
     catch (e) { setMsg('listMsg', e.message, 'err'); }
   }
 
